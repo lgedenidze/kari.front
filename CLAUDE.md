@@ -25,6 +25,10 @@ node e2e/warm-tabs.mjs           # what a tap on the dock costs — production b
 **Do not run `pnpm build` while `pnpm dev` is running here.** They share `.next`; every open
 tab reloads in a loop until the build ends.
 
+**If every page reloads in a loop with only `pnpm dev` running,** its cache is broken — a dev
+server that was killed, not stopped, leaves it so. The browser console repeats
+"[Fast Refresh] rebuilding". Stop `pnpm dev`, delete `.next/dev`, start it again.
+
 ## Where things are
 
 ```
