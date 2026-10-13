@@ -19,6 +19,18 @@ layout that read the language cookie would make them dynamic and give `/en` the 
 Moving between groups is a full page load. That is fine: it only happens between the landing
 page and the app.
 
+### Someone who comes back
+
+The landing page is static, so it cannot know who is looking at it. But most people who open
+it a second time are not strangers. `lib/known-here.ts` keeps two notes in the browser's own
+storage: "a member has signed in here" (written by the signed-in frame, removed on sign-out
+and on deleting the account) and the address of a guest's or walk-in's ticket this browser
+has opened. `components/return-action.tsx` reads them after the page is on screen and changes
+the page's one action: a member is offered **My pass**, a ticket-holder **My ticket**, a
+stranger **Request access**. Neither note is a credential — the pass is still behind the
+session and the ticket behind its own link — and a ticket for a night already gone is not
+offered. `e2e/flow.spec.ts` covers all three.
+
 ## Language
 
 - **Public pages:** the URL decides. `/` is Georgian, `/en` is English. Each links to the other

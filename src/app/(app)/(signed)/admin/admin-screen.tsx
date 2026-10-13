@@ -99,6 +99,8 @@ export function AdminSkeleton() {
 
 export function AdminScreen({ first }: { first: Overview | null }) {
   const [tab, setTab] = useState<AdminTab>("tonight");
+  // The night the door's list opens on, when it is opened from a night on the first tab.
+  const [listNight, setListNight] = useState("");
 
   // The tab lives in the address, so a refresh or a shared link lands in the same place.
   useEffect(() => {
@@ -111,9 +113,12 @@ export function AdminScreen({ first }: { first: Overview | null }) {
     return () => window.removeEventListener("hashchange", fromHash);
   }, []);
 
-  const go = (next: AdminTab) => {
+  const go = (next: AdminTab, night = "") => {
     window.history.replaceState(null, "", `#${next}`);
+    setListNight(night);
     setTab(next);
+    // A tab starts at its top, wherever the last one was left.
+    window.scrollTo(0, 0);
   };
 
   return (
@@ -122,7 +127,7 @@ export function AdminScreen({ first }: { first: Overview | null }) {
       {tab === "requests" && <RequestsTab />}
       {tab === "people" && <PeopleTab />}
       {tab === "nights" && <NightsTab />}
-      {tab === "log" && <LogTab />}
+      {tab === "log" && <LogTab night={listNight} />}
       {tab === "settings" && <SettingsTab />}
     </AdminFrame>
   );

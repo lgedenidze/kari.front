@@ -179,7 +179,7 @@ export function DoorScreen({ first }: { first: DoorTonight | null }) {
     busy.current = false;
   }, []);
 
-  async function open(hit: SearchHit) {
+  async function open(hit: { passId: string | null; userId: string | null }) {
     setFailure(null);
     try {
       setResult(await api.get<ScanResult>(hit.passId ? `/door/pass/${hit.passId}` : `/door/person/${hit.userId}`));
@@ -228,7 +228,7 @@ export function DoorScreen({ first }: { first: DoorTonight | null }) {
 
         {tab === "find" && <Finder onOpen={open} onWalkIn={() => setWalkIn(true)} />}
 
-        {tab === "log" && <Log entries={tonight?.recent ?? []} />}
+        {tab === "log" && <Log entries={tonight?.recent ?? []} onOpen={open} />}
       </DoorFrame>
 
       {result && <ResultSheet result={result} onClose={() => setResult(null)} onDecided={decided} />}
@@ -435,10 +435,23 @@ function ResultSheet({
         ) : (
           <>
             <div className="grid grid-cols-2 gap-3">
-              <button type="button" className="btn btn-stop btn-big" disabled={busy} onClick={() => setDenying(true)}>
+              {/* Both answers are always one tap, in the same place. What the scanner advises
+                  is the filled one; the answer against its advice is an outline. On a "wait"
+                  it has no advice, and both are filled. */}
+              <button
+                type="button"
+                className={`btn btn-big ${tone === "go" ? "btn-line text-stop" : "btn-stop"}`}
+                disabled={busy}
+                onClick={() => setDenying(true)}
+              >
                 {t.door.deny}
               </button>
-              <button type="button" className="btn btn-go btn-big" disabled={busy} onClick={() => decide("admitted")}>
+              <button
+                type="button"
+                className={`btn btn-big ${tone === "stop" ? "btn-line text-go" : "btn-go"}`}
+                disabled={busy}
+                onClick={() => decide("admitted")}
+              >
                 {t.door.admit}
               </button>
             </div>
@@ -548,25 +561,38 @@ function Finder({ onOpen, onWalkIn }: { onOpen: (hit: SearchHit) => void; onWalk
   );
 }
 
-function Log({ entries }: { entries: Entry[] }) {
+/**
+ * Tonight's list: everyone the door has decided about, the latest first. A row opens that
+ * person again — to look at who it was, or to decide again. Nothing in the list is ever
+ * changed: a second answer is a second record.
+ */
+function Log({ entries, onOpen }: { entries: Entry[]; onOpen: (entry: Entry) => void }) {
   const { t, time } = useI18n();
   if (entries.length === 0) return <p className="pt-6 text-center text-ink-soft">{t.door.logEmpty}</p>;
 
   return (
     <ul className="space-y-2">
       {entries.map((entry) => (
-        <li key={entry.id} className="flex items-center justify-between gap-3 rounded-2xl bg-ink px-4 py-3">
-          <span className="min-w-0">
-            <span className="block truncate font-bold text-paper-light">{entry.personName}</span>
-            <span className="block truncate text-sm text-ink-soft">
-              <span className="tabular">{time(entry.createdAt)}</span>
-              {entry.method === "manual" && `, ${t.door.byHand}`}
-              {entry.reason && `, ${entry.reason}`}
+        <li key={entry.id}>
+          <button
+            type="button"
+            // A record of someone the door cannot look up again has nothing to open.
+            disabled={!entry.passId && !entry.userId}
+            onClick={() => onOpen(entry)}
+            className="flex w-full items-center justify-between gap-3 rounded-2xl bg-ink px-4 py-3 text-left transition-colors hover:bg-ink-raised active:bg-ink-raised"
+          >
+            <span className="min-w-0">
+              <span className="block truncate font-bold text-paper-light">{entry.personName}</span>
+              <span className="block truncate text-sm text-ink-soft">
+                <span className="tabular">{time(entry.createdAt)}</span>
+                {entry.method === "manual" && `, ${t.door.byHand}`}
+                {entry.reason && `, ${entry.reason}`}
+              </span>
             </span>
-          </span>
-          <span className={`chip flex-none ${entry.decision === "admitted" ? "text-go" : "text-stop"}`}>
-            {entry.decision === "admitted" ? t.door.admitted : t.door.denied}
-          </span>
+            <span className={`chip flex-none ${entry.decision === "admitted" ? "text-go" : "text-stop"}`}>
+              {entry.decision === "admitted" ? t.door.admitted : t.door.denied}
+            </span>
+          </button>
         </li>
       ))}
     </ul>

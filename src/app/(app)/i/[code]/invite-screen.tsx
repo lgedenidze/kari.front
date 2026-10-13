@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FormError } from "@/components/field";
 import { PassIcon } from "@/components/icons";
 import { LiveTicket } from "@/components/live-ticket";
@@ -11,6 +11,7 @@ import { StubCode, TicketCard } from "@/components/ticket";
 import { useLive } from "@/components/use-live";
 import { useI18n } from "@/i18n/provider";
 import { api, isApiError } from "@/lib/api";
+import { rememberTicket } from "@/lib/known-here";
 import type { InviteLinkResponse } from "@/lib/types";
 import { venue } from "@/venue";
 
@@ -22,6 +23,12 @@ export function InviteScreen({ code, first }: { code: string; first: InviteLinkR
   const [answerFailure, setAnswerFailure] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const failure = answerFailure ?? live.failure;
+
+  // A guest who holds this ticket finds it again from the landing page ("my ticket").
+  const held = data && !data.viewerIsInviter && data.invite.status === "accepted" ? (data.ticket?.night ?? null) : null;
+  useEffect(() => {
+    if (held) rememberTicket(`/i/${code}`, held);
+  }, [code, held]);
 
   async function answer(action: "accept" | "decline") {
     setBusy(true);
@@ -74,11 +81,7 @@ export function InviteScreen({ code, first }: { code: string; first: InviteLinkR
             <FormError code={failure} />
           </div>
         )}
-        {!invite.admitted && (
-          <button type="button" className="link text-sm text-ink-soft" disabled={busy} onClick={() => answer("decline")}>
-            {t.invites.cantCome}
-          </button>
-        )}
+        {!invite.admitted && <CantCome busy={busy} onDecline={() => answer("decline")} />}
       </div>
     );
   }
@@ -95,7 +98,13 @@ export function InviteScreen({ code, first }: { code: string; first: InviteLinkR
         firstName={invite.guestFirstName}
         lastName={invite.guestLastName}
         kindLabel={fill(t.ticket.guestOf, { name: invite.inviterName })}
-        caption={<p className="font-normal text-paper-soft">{t.inviteLink.idNote}</p>}
+        caption={
+          <>
+            {/* When to come: the guest has no other screen that says it. */}
+            {data.night.open && <p>{fill(t.ticket.doors, { open: data.night.doorsOpen, close: data.night.doorsClose })}</p>}
+            <p className="font-normal text-paper-soft">{t.inviteLink.idNote}</p>
+          </>
+        }
         stubLeft={
           invite.guestPersonalNumber ? <StubCode label={t.common.personalNumber} code={invite.guestPersonalNumber} /> : <span />
         }
@@ -115,9 +124,38 @@ export function InviteScreen({ code, first }: { code: string; first: InviteLinkR
         </div>
       )}
 
-      <button type="button" className="link px-3 py-2.5 text-ink-soft" disabled={busy} onClick={() => answer("decline")}>
+      <CantCome busy={busy} onDecline={() => answer("decline")} />
+    </div>
+  );
+}
+
+/**
+ * "I can't come" gives the ticket up for good — the invite cannot be accepted again — so it
+ * is asked for twice, in place. It stays a quiet line until it is tapped.
+ */
+function CantCome({ busy, onDecline }: { busy: boolean; onDecline: () => void }) {
+  const { t } = useI18n();
+  const [asking, setAsking] = useState(false);
+
+  if (!asking) {
+    return (
+      <button type="button" className="link px-3 py-2.5 text-sm text-ink-soft" disabled={busy} onClick={() => setAsking(true)}>
         {t.invites.cantCome}
       </button>
+    );
+  }
+
+  return (
+    <div className="rise w-full max-w-[22rem] rounded-2xl border-2 border-ink-line p-4 text-center">
+      <p className="font-semibold text-paper-light">{t.invites.declineConfirm}</p>
+      <div className="mt-3 flex gap-2">
+        <button type="button" className="btn btn-stop flex-1" disabled={busy} onClick={onDecline}>
+          {t.invites.decline}
+        </button>
+        <button type="button" className="btn btn-line flex-1 text-paper-light" disabled={busy} onClick={() => setAsking(false)}>
+          {t.common.back}
+        </button>
+      </div>
     </div>
   );
 }

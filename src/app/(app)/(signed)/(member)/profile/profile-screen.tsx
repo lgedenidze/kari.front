@@ -8,6 +8,7 @@ import { useMe } from "@/components/me";
 import { PhotoPicker } from "@/components/photo-picker";
 import { useI18n } from "@/i18n/provider";
 import { api, isApiError } from "@/lib/api";
+import { forgetMember } from "@/lib/known-here";
 import { forgetAll } from "@/lib/live-store";
 import type { Me } from "@/lib/types";
 
@@ -25,6 +26,7 @@ export function ProfileScreen() {
     await api.post("/auth/logout").catch(() => {});
     // Nothing this account saw may be shown to whoever signs in next on this phone.
     forgetAll();
+    forgetMember();
     router.push("/");
     router.refresh();
   }
@@ -106,25 +108,39 @@ function Row({ label, done = false, onOpen }: { label: string; done?: boolean; o
   );
 }
 
+// Counts photo changes for as long as the app is open. It goes on the photo's address, so
+// coming back to this screen after a change asks for the new picture, not the cached old one.
+let photoChanges = 0;
+
 function Photo({ me, onSaved }: { me: Me; onSaved: (me: Me) => void }) {
   const { t } = useI18n();
-  // The stored photo is behind sign-in; the version suffix busts the cache after a change.
-  const [version, setVersion] = useState(0);
   const [failure, setFailure] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  // What was just picked on this phone, shown the moment it is picked: sending it to the
+  // server takes a second or two, and a tap that seems to do nothing gets tapped again.
+  // `undefined` means nothing was picked here and the account's own photo is the one to show;
+  // `null` means the photo was taken off.
+  const [picked, setPicked] = useState<string | null | undefined>(undefined);
+  const stored = me.hasPhoto ? `/api/photos/${me.id}?v=${photoChanges}` : null;
 
   async function change(photo: string | null) {
     setFailure(null);
+    setPicked(photo);
+    setBusy(true);
     try {
       onSaved(photo ? await api.put<Me>("/me/photo", { photo }) : await api.delete<Me>("/me/photo"));
-      setVersion((v) => v + 1);
+      photoChanges += 1;
     } catch (error) {
+      // Back to what the account really has.
+      setPicked(undefined);
       setFailure(isApiError(error) ? (error.fields.photo ?? error.code) : "server_error");
     }
+    setBusy(false);
   }
 
   return (
     <div role="group" aria-label={t.profile.photoSection}>
-      <PhotoPicker bare value={me.hasPhoto ? `/api/photos/${me.id}?v=${version}` : null} onChange={change} error={failure ?? undefined} />
+      <PhotoPicker bare busy={busy} value={picked === undefined ? stored : picked} onChange={change} error={failure ?? undefined} />
     </div>
   );
 }
@@ -265,6 +281,8 @@ function DeleteAccount() {
     setFailure(null);
     try {
       await api.post("/me/delete", { password: new FormData(event.currentTarget).get("password") });
+      forgetAll();
+      forgetMember();
       router.push("/");
       router.refresh();
     } catch (error) {

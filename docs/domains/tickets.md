@@ -59,11 +59,12 @@ account:
 - `approved` and open tonight → the pass **before it is printed**: the same ticket, with the
   member's name and tonight on it, a dashed window where the code will be, and the button that
   prints it. A first visit shows what they are about to hold, not a paragraph about it;
-- `approved` and closed tonight → the same ticket, saying closed;
+- `approved` and closed tonight → the same ticket, saying closed, and when the next open night
+  is. The coming week comes with the page (`getVenue`, the landing page's own copy);
 - `pending` → "your request is with the bar", with a grey stamp, the three steps (sent, in
-  review, pass), and the Facebook link that was sent with a way to change it — a mistyped link
-  is the usual reason a request sits unanswered. The page polls and changes by itself when the
-  bar answers;
+  review, pass), and the Facebook link that was sent — a link, so they can see it opens the
+  right profile — with a way to change it. A mistyped link is the usual reason a request sits
+  unanswered. The page polls and changes by itself when the bar answers;
 - `rejected` → the bar's note, and a form to fix the Facebook link and ask again;
 - `guest` → a form to ask for membership;
 - `banned` → suspended.
@@ -71,31 +72,33 @@ account:
 Below: invites waiting, passes for coming nights, and the count of nights so far — once there
 is a night to count.
 
-## Invites
+## Inviting a guest
 
-`(signed)/(member)/invites/invites-screen.tsx`.
+`(signed)/(member)/invites/invites-screen.tsx`. Rebuilt on 2026-10-13, on the owner's word that
+the screen was hard to use.
 
-- **For you** — invites addressed to this account. Accept, decline, or open the ticket. Shown
-  only when there is one; with none, the screen is simply the form.
-- **From you** — if the member may invite: the form, then the list of sent invites with their
-  state and a way to share or cancel each. If not: why not, and how many nights are left to earn it.
-  The heading itself appears only when "For you" is on screen too.
-- After creating an invite the member sees its link as a QR (the guest can scan it off the
-  member's screen) and a share button.
+Inviting is three things, in the order a member thinks of them: **who, which night, send.**
 
-### The night calendar
-
-`components/night-picker.tsx`. Two weeks, seven columns, Monday first.
-
-- Every night is drawn. Open ones can be chosen. Closed ones are dashed and struck through.
-  Used-up ones are greyed.
-- Tonight is underlined. A named night carries a dot.
-- Under the grid: the chosen night in full — date, its name, its note, invites left.
-- Named nights are also listed by name under "Special nights", because a name is what people
-  look for.
-
-The API sends all fourteen nights in order (`InvitesOverview.nights`). The picker lays them out;
-it does not generate dates.
+- **The form** is a name (two fields on one line), a row of nights and one button. All of it is
+  in view on a 360px phone before anything is typed; a test holds it to that.
+- **The row of nights** (`components/night-picker.tsx`) replaced a two-week calendar and a
+  second list of named nights. Only nights the bar is open are on it, the nearest first.
+  Tonight says "Today". A named night carries its name. A night with no invites left is there,
+  struck through, and cannot be chosen. Under the row: the chosen night in full — date, name,
+  note, invites left. The row scrolls sideways and fades at its far edge. The API sends the
+  nights (`InvitesOverview.nights`); the row does not generate dates.
+- **The personal number and the phone** are folded behind one line, "+ Personal number or
+  phone". They unfold by themselves when the API finds a mistake in one.
+- **What comes back is a sheet** over the whole screen: the guest's name, the night, the link
+  as a QR to scan off the member's phone, and one large Share button. The invite is not done
+  until the guest has it, so that is all there is until the member closes the sheet. Behind
+  it the form is empty again. Sharing sends a line of words with the link — "Invite: NISLI,
+  Fri 16 Oct" — so the guest's chat shows what it is.
+- **Sent** — under the form: each invite with its state, Share, and Cancel (asked for twice).
+- **For you** — above the form, only when there is an invite. Accept goes straight to the
+  pass, where the ticket is. Decline is asked for twice: an invite cannot be accepted again.
+- **Not allowed to invite yet** — a card that fills, one mark for each night been, and how
+  many are left. A member the bar has switched inviting off for sees one line instead.
 
 ## The invite link
 
@@ -104,7 +107,8 @@ as a door ticket is: someone opening the link sees the ticket in the first paint
 
 - Pending: the invite drawn as the ticket it will become — the same shape as a member's pass
   before it is claimed: a dashed window where the code will be, and in it the one button that
-  prints it. Under the ticket, a quiet "I can't come".
+  prints it. The caption says when the doors are open that night. Under the ticket, a quiet
+  "I can't come", which asks once more before it gives the ticket up.
 - Accepted: the live ticket, and "keep this page — it is your ticket".
 - The personal number is masked here. The link can be forwarded.
 - The member who sent it sees its state and a link to manage invites — never the guest's QR.

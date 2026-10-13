@@ -1,17 +1,26 @@
 "use client";
 
+import { useEffect } from "react";
 import { FormError } from "@/components/field";
 import { LiveTicket } from "@/components/live-ticket";
 import { TicketSkeleton } from "@/components/loading";
 import { SaveToPhone } from "@/components/save-to-phone";
 import { useLive } from "@/components/use-live";
 import { useI18n } from "@/i18n/provider";
+import { rememberTicket } from "@/lib/known-here";
 import type { TicketResponse } from "@/lib/types";
 import { venue } from "@/venue";
 
 export function TicketScreen({ token, first }: { token: string; first: TicketResponse | null }) {
   const { t } = useI18n();
   const { data, failure, missing } = useLive<TicketResponse>(`/tickets/${encodeURIComponent(token)}`, { every: 6000, first });
+
+  // A walk-in has no account and no message with this link in it. The phone keeps the
+  // address, and the landing page offers it back as "my ticket".
+  const night = data?.ticket.night;
+  useEffect(() => {
+    if (night) rememberTicket(`/t/${token}`, night);
+  }, [token, night]);
 
   if (missing) {
     return (

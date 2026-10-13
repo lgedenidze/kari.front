@@ -77,7 +77,9 @@ export function PeopleTab() {
         />
       </label>
 
-      <div className="flex flex-wrap gap-2" role="group" aria-label={t.admin.statusLabel}>
+      {/* One line, which scrolls and fades at its far edge, like the tabs above: six filters
+          wrapped into three rows before a single person was on screen. */}
+      <div className="scroll-row -mx-4 flex gap-2 px-4" role="group" aria-label={t.admin.statusLabel}>
         {(["", ...STATUSES] as const).map((value) => (
           <button
             key={value || "all"}
@@ -87,13 +89,14 @@ export function PeopleTab() {
               setStatus(value);
               setPage(1);
             }}
-            className={`min-h-10 rounded-full border-2 border-ink px-3.5 text-sm font-bold ${
+            className={`min-h-10 flex-none whitespace-nowrap rounded-full border-2 border-ink px-3.5 text-sm font-bold ${
               status === value ? "bg-ink text-paper-light" : "bg-white"
             }`}
           >
             {value ? t.status[value] : t.admin.all}
           </button>
         ))}
+        <span className="w-6 flex-none" aria-hidden="true" />
       </div>
 
       {failure && <FormError code={failure} />}

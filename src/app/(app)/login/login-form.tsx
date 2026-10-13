@@ -15,7 +15,8 @@ export function LoginForm({ next }: { next: string }) {
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    const target = event.currentTarget;
+    const form = new FormData(target);
     setBusy(true);
     setFailure(null);
     try {
@@ -27,6 +28,12 @@ export function LoginForm({ next }: { next: string }) {
     } catch (error) {
       setFailure(isApiError(error) ? error.code : "server_error");
       setBusy(false);
+      // Nearly always it is the password. It is selected, so the next key typed replaces it.
+      if (isApiError(error) && error.code === "invalid_credentials") {
+        const password = target.querySelector<HTMLInputElement>("input[name='password']");
+        password?.focus();
+        password?.select();
+      }
     }
   }
 

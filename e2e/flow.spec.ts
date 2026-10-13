@@ -135,14 +135,27 @@ test("a member invites a named guest, who gets a ticket with no account", async 
 
   // The member fills in the invite: first name, last name, and the optional personal number.
   await host.goto("/invites");
+  // The whole form is on the first screen: the button is in view before anything is typed.
+  await expect(host.getByRole("button", { name: "Create invite" })).toBeInViewport({ ratio: 1 });
   await host.getByLabel("First name").fill("Davit");
   await host.getByLabel("Last name").fill(`Guest${run}`);
+  // The personal number is folded away until it is asked for.
+  await host.getByRole("button", { name: "+ Personal number or phone" }).click();
   await host.getByLabel("Personal number").fill("01024012345");
   await host.getByRole("button", { name: "Create invite" }).click();
-  await expect(host.getByRole("heading", { name: "Invite ready" })).toBeVisible();
 
-  const link = await host.locator("svg[data-value*='/i/']").getAttribute("data-value");
+  // What comes back covers the screen: the link, and nothing else, until it is closed.
+  const ready = host.getByRole("dialog", { name: "Invite ready" });
+  await expect(ready.getByRole("heading", { name: "Invite ready" })).toBeVisible();
+  await expect(ready).toContainText(`Davit Guest${run}`);
+  await expect(ready.getByRole("button", { name: "Share" })).toBeVisible();
+  const link = await ready.locator("svg[data-value*='/i/']").getAttribute("data-value");
   expect(link).toMatch(/\/i\/[a-z0-9]{14}$/);
+  await ready.getByRole("button", { name: "Close" }).click();
+  await expect(ready).toBeHidden();
+  // Behind it the form is empty again, and the guest is in the list of sent invites.
+  await expect(host.getByLabel("First name")).toHaveValue("");
+  await expect(host.locator("li", { hasText: `Guest${run}` })).toContainText("Waiting");
 
   // The guest opens the link in a browser that has never signed in.
   const guest = await (await english(browser)).newPage();
@@ -230,6 +243,36 @@ test("the public pages are indexable, in both languages", async ({ browser }) =>
   expect((await page.request.get("/sitemap.xml")).ok()).toBe(true);
   const robots = await (await page.request.get("/robots.txt")).text();
   expect(robots).toContain("Disallow: /admin");
+});
+
+test("the landing page offers a member their pass, and a guest their ticket, when they come back", async ({ browser }) => {
+  // A stranger is asked to request access.
+  const stranger = await (await english(browser)).newPage();
+  await stranger.goto("/en");
+  await expect(stranger.getByRole("link", { name: "Request access" }).first()).toBeVisible();
+  await expect(stranger.getByRole("link", { name: "My pass" })).toHaveCount(0);
+
+  // Someone who has signed in on this phone is offered their pass instead.
+  const member = await signIn(browser, seed.StaffPhone, seed.StaffPassword);
+  await member.goto("/en");
+  const pass = member.getByRole("link", { name: "My pass" }).first();
+  await expect(pass).toBeVisible();
+  await expect(member.getByRole("link", { name: "Request access" })).toHaveCount(0);
+  await pass.click();
+  await member.waitForURL("**/pass");
+
+  // A walk-in has no account: the phone that opened their ticket is offered it back.
+  const issued = await member.request.post("/api/door/walk-in", { data: { firstName: "Back", lastName: `Again${run}` } });
+  expect(issued.ok()).toBe(true);
+  const { ticketToken } = (await issued.json()) as { ticketToken: string };
+  const guest = await (await english(browser)).newPage();
+  await guest.goto(`/t/${ticketToken}`);
+  await expect(guest.locator(".ticket")).toContainText(`Again${run}`);
+  await guest.goto("/en");
+  const ticket = guest.getByRole("link", { name: "My ticket" }).first();
+  await expect(ticket).toBeVisible();
+  await ticket.click();
+  await guest.waitForURL(`**/t/${ticketToken}`);
 });
 
 test("an admin names a night, and members see it by name", async ({ browser }) => {

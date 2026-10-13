@@ -24,7 +24,7 @@ export function Privacy({ lang }: { lang: Lang }) {
       </header>
       <main className="mx-auto w-full max-w-3xl flex-1 px-5 pb-[max(3rem,env(safe-area-inset-bottom))] pt-9 sm:px-8 sm:pt-12">
         {/* The Georgian title is one seventeen-letter word: sized to the screen, not to a scale. */}
-        <h1 className="text-[clamp(1.9rem,9.4vw,3.75rem)] text-paper">{t.title}</h1>
+        <h1 className="text-[clamp(1.5rem,8.3vw,3.75rem)] text-paper">{t.title}</h1>
         <p className="mt-4 text-[1.0625rem] text-ink-soft sm:mt-5 sm:text-lg">{fill(t.intro, { venue: venue.name })}</p>
         {sections.map(([title, lines]) => (
           <section key={title} className="mt-9 sm:mt-10">

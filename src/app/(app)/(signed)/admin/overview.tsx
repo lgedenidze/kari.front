@@ -12,7 +12,7 @@ export function OverviewSkeleton() {
   return <RowsSkeleton rows={4} title />;
 }
 
-export function OverviewTab({ go, first }: { go: (tab: AdminTab) => void; first: Overview | null }) {
+export function OverviewTab({ go, first }: { go: (tab: AdminTab, night?: string) => void; first: Overview | null }) {
   const { t, fill, night } = useI18n();
   const { data, failure } = useLive<Overview>("/admin/overview", { every: 10000, first });
 
@@ -92,9 +92,16 @@ export function OverviewTab({ go, first }: { go: (tab: AdminTab) => void; first:
                   // A night with nobody is set back, so the busy ones are what the eye finds.
                   <tr key={point.night} className={`border-b border-desk-line ${quiet ? "text-desk-soft" : ""}`}>
                     {/* The short date on a phone, where the long one wraps onto two lines. */}
-                    <th scope="row" className={`whitespace-nowrap py-2.5 pr-3 ${quiet ? "font-normal" : "font-bold"}`}>
-                      <span className="sm:hidden">{night(point.night)}</span>
-                      <span className="hidden sm:inline">{night(point.night, "long")}</span>
+                    <th scope="row" className={`whitespace-nowrap pr-3 ${quiet ? "font-normal" : "font-bold"}`}>
+                      {/* A night opens the door's list for that night: the figures, then who. */}
+                      <button
+                        type="button"
+                        onClick={() => go("log", point.night)}
+                        className="min-h-11 text-left underline decoration-desk-line decoration-2 underline-offset-4 hover:decoration-ink"
+                      >
+                        <span className="sm:hidden">{night(point.night)}</span>
+                        <span className="hidden sm:inline">{night(point.night, "long")}</span>
+                      </button>
                     </th>
                     <td className={`tabular py-2.5 pr-3 text-right ${quiet ? "" : "font-extrabold"}`}>{point.admitted}</td>
                     <td className="tabular py-2.5 text-right">{point.denied}</td>

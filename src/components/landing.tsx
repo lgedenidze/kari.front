@@ -5,6 +5,7 @@ import { venue, type Lang } from "@/venue";
 import { RememberLang } from "./app-chrome";
 import { SiteLangLink, VenueMark, WoxCredit, WoxLogo } from "./brand";
 import { Qr } from "./qr";
+import { ReturnAction } from "./return-action";
 import { Stamp } from "./stamp";
 import { StubCode, TicketCard } from "./ticket";
 
@@ -15,6 +16,12 @@ export async function Landing({ lang }: { lang: Lang }) {
   const tonight = data?.tonight;
   const nextOpen = data?.week.find((n) => n.open && n.night !== tonight?.night);
   const privacyHref = lang === "en" ? "/en/privacy" : "/privacy";
+  const actionLabels = {
+    request: t.common.requestAccess,
+    haveAccount: t.landing.haveAccount,
+    myPass: t.landing.myPass,
+    myTicket: t.landing.myTicket,
+  };
   const woxRing = `POWERED BY ✦ ${t.landing.doorSystemBy.toUpperCase()} ✦ POWERED BY ✦ ${t.landing.doorSystemBy.toUpperCase()} ✦ `;
 
   const jsonLd = {
@@ -97,13 +104,8 @@ export async function Landing({ lang }: { lang: Lang }) {
             <h1 className="text-[clamp(2.9rem,12.5vw,6.25rem)] text-paper">{t.landing.title}</h1>
             <p className="mt-5 max-w-[34rem] text-[1.0625rem] text-ink-soft sm:mt-6 sm:text-xl">{t.landing.lede}</p>
             {/* On a phone the one action spans the screen, where a thumb is. */}
-            <div className="mt-7 flex flex-col items-stretch gap-4 sm:mt-8 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-6">
-              <Link href="/join" className="btn btn-paper btn-big px-8">
-                {t.common.requestAccess}
-              </Link>
-              <Link href="/login" className="link self-center text-paper-light">
-                {t.landing.haveAccount}
-              </Link>
+            <div className="mt-7 flex flex-col items-stretch gap-3 sm:mt-8 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-4">
+              <ReturnAction labels={actionLabels} tonight={tonight?.night} second />
             </div>
 
             {tonight && (
@@ -218,9 +220,9 @@ export async function Landing({ lang }: { lang: Lang }) {
           </div>
 
           <div className="mt-10 flex flex-col gap-y-8 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-x-10 md:mt-14">
-            <Link href="/join" className="btn btn-paper btn-big px-8">
-              {t.common.requestAccess}
-            </Link>
+            <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
+              <ReturnAction labels={actionLabels} tonight={tonight?.night} />
+            </div>
             {/* The maker's mark, in the page's own language of stamps. On a phone the hero has
                 already shown it once, and the footer says it again: twice in one thumb-scroll
                 would be shouting. */}

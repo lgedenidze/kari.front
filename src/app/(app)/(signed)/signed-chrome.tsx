@@ -1,9 +1,10 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Dock } from "@/components/app-chrome";
 import { MeProvider, useMe, usePoll } from "@/components/me";
+import { rememberMember } from "@/lib/known-here";
 import type { Me } from "@/lib/types";
 
 export function SignedChrome({ me, children }: { me: Me; children: ReactNode }) {
@@ -15,6 +16,9 @@ export function SignedChrome({ me, children }: { me: Me; children: ReactNode }) 
   // The screen being left. Nearly always the next one is already in hand and replaces it
   // before this shows; when it is not, the old screen steps back so the tap is plainly answered.
   const leaving = heading !== null && !pathname.startsWith(heading);
+
+  // So the landing page offers this phone its pass next time, not "request access".
+  useEffect(() => rememberMember(), []);
 
   function onTap(href: string) {
     const tap = { href, from: pathname };

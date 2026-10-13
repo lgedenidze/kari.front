@@ -49,10 +49,12 @@ src/
     manifest.webmanifest/  the home-screen manifest; invite and ticket pages serve their own
     …/ticket.png/        the ticket as a picture, for the download button (pass, invite, door ticket)
     sitemap.ts robots.ts icon.svg apple-icon.png
-  components/            ticket, live-ticket, stamp, qr, night-picker, app-chrome (dock), brand, icons,
+  components/            ticket, live-ticket, stamp, qr, night-picker, app-chrome (dock), brand, icons, face,
+                         return-action (the landing page's action for someone who comes back),
                          loading (skeletons), use-live (a screen's data), save-to-phone
   i18n/                  en.ts, ka.ts, formatters, provider
   lib/                   api (browser), server-api (server), live-store (what each screen last heard),
+                         known-here (what this phone remembers, for the public pages),
                          pass-code, scan-presence, web-manifest, types, photo
 assets/fonts/            static fonts for the ticket picture (the app itself uses next/font)
 e2e/                     flow.spec.ts (the journeys), loading.spec.ts (how a screen arrives, on a slowed

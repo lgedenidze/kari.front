@@ -56,7 +56,8 @@ Georgian has no capital letters. Do not build hierarchy on uppercase.
 | `Stamp` | `components/stamp.tsx` | A round stamp with a word across it. Inks: blue, green, red, grey, paper. |
 | `Dock` | `components/app-chrome.tsx` | The floating navigation on every signed-in screen. |
 | `Count` | `components/count.tsx` | A red mark with a white number: something is waiting for an answer. See "The dock". |
-| `NightPicker` | `components/night-picker.tsx` | The two-week calendar. |
+| `NightPicker` | `components/night-picker.tsx` | One row of the nights the bar is open, to tap. See tickets.md, "Inviting a guest". |
+| `ReturnAction` | `components/return-action.tsx` | The landing page's one action, which changes for someone this phone already knows. See structure.md, "Someone who comes back". |
 | icons | `components/icons.tsx` | The app's own icons: ticket, invite, viewfinder, rubber stamp, person-in-ring. |
 | `Field`, `FormError` | `components/field.tsx` | A labelled input wired to its hint and error. A password field can be looked at before it is sent: there is no second field to catch a slip, and no "forgot password". `FieldLabel` puts "optional" at the far end of the label's line. `useFirstMistake` takes a form that came back with mistakes to the first one; `FormError` brings itself into view. |
 | `Face` | `components/face.tsx` | A person's photo from the API. A photo that will not load leaves nothing behind — never the browser's broken-picture mark. |
@@ -114,8 +115,16 @@ the mark keeps still: it never pulses.
 13. **A no is asked for twice; a yes is not.** Rejecting a request, cancelling an invite and
     deleting a night each take a second tap, in place. Approving, admitting and creating do not.
 14. **A row that opens something is the button.** A person, a night in the schedule, a line of
-    the profile: the whole row is tapped and carries an arrow. Not a row with an "Edit" button
-    in it.
+    the profile, a record in the door's list: the whole row is tapped. Not a row with an
+    "Edit" button in it.
+15. **What a form needs first comes first, and what it may need is folded away.** Inviting is
+    a name, a night and a button, in view at once. The personal number and the phone are one
+    tap away, and unfold by themselves when the API finds a mistake in one.
+16. **When there is advice, the advised answer is the filled button.** At the door both
+    answers are always one tap and never change places; the one the scanner advises is filled
+    and the other is an outline. With no advice, both are filled.
+17. **Closed, locked and empty say what comes next.** A closed night names the next open one.
+    Inviting that is not unlocked yet shows how many nights are left, as a card that fills.
 
 ## Words
 

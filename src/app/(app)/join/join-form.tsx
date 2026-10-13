@@ -68,16 +68,24 @@ export function JoinForm() {
         <p className="hint">{t.join.nameNote}</p>
       </div>
 
-      <Field
-        label={t.common.phone}
-        name="phone"
-        type="tel"
-        inputMode="tel"
-        autoComplete="tel"
-        placeholder="555 12 34 56"
-        required
-        error={fields.phone}
-      />
+      <div>
+        <Field
+          label={t.common.phone}
+          name="phone"
+          type="tel"
+          inputMode="tel"
+          autoComplete="tel"
+          placeholder="555 12 34 56"
+          required
+          error={fields.phone}
+        />
+        {/* "This number already has an account. Sign in" comes with the way to do it. */}
+        {fields.phone === "phone_taken" && (
+          <Link href="/login" className="btn btn-line btn-small mt-2">
+            {t.common.signIn}
+          </Link>
+        )}
+      </div>
 
       <Field
         label={t.join.facebook}

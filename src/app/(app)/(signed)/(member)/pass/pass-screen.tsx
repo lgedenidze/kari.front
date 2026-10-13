@@ -13,7 +13,7 @@ import { PassIcon } from "@/components/icons";
 import { useLive } from "@/components/use-live";
 import { useI18n } from "@/i18n/provider";
 import { api, isApiError } from "@/lib/api";
-import type { Me, TonightResponse } from "@/lib/types";
+import type { Me, NightInfo, TonightResponse } from "@/lib/types";
 import { venue } from "@/venue";
 
 /** The pass on its way: the one placeholder this screen has, here and in loading.tsx. */
@@ -25,7 +25,7 @@ export function PassSkeleton() {
   );
 }
 
-export function PassScreen({ first }: { first: TonightResponse | null }) {
+export function PassScreen({ first, week = null }: { first: TonightResponse | null; week?: NightInfo[] | null }) {
   const { t, fill, night } = useI18n();
   const { me, setMe, refresh } = useMe();
   // Asked again every few seconds: this is how the phone learns the door let them in. A failed
@@ -65,6 +65,8 @@ export function PassScreen({ first }: { first: TonightResponse | null }) {
 
   const { tonight, ticket } = data;
   const nightLabel = tonight.title ? `${tonight.title}, ${night(tonight.night)}` : night(tonight.night);
+  // The first open night after this one, by the API's own dates.
+  const nextOpen = week?.find((n) => n.open && n.night > tonight.night);
 
   return (
     <div className="flex flex-1 flex-col items-center gap-6">
@@ -127,6 +129,13 @@ export function PassScreen({ first }: { first: TonightResponse | null }) {
           <div className="flex aspect-square w-full flex-col items-center justify-center gap-2 rounded-xl border-[3px] border-dashed border-paper-line px-3 text-center">
             <p className="display text-3xl">{t.pass.closedTitle}</p>
             {tonight.note && <p className="text-sm text-paper-soft">{tonight.note}</p>}
+            {/* Closed is not a dead end: say when to come back. */}
+            {nextOpen && (
+              <p className="mt-1 text-sm font-semibold">
+                {fill(t.landing.nextOpen, { date: night(nextOpen.night, "long") })}
+                {nextOpen.title && `, ${nextOpen.title}`}
+              </p>
+            )}
           </div>
         </TicketCard>
       )}
@@ -262,7 +271,10 @@ function PendingCard({ me, onChanged }: { me: Me; onChanged: (me: Me) => void })
       {me.facebookUrl && (
         <div className="mt-5 rounded-xl border-2 border-ink bg-qr px-4 py-3">
           <p className="text-sm font-bold">{t.pass.yourLink}</p>
-          <p className="truncate">{me.facebookUrl.replace("https://www.", "")}</p>
+          {/* A link, so the guest can see for themselves that it opens the right profile. */}
+          <a href={me.facebookUrl} target="_blank" rel="noopener" className="link block truncate">
+            {me.facebookUrl.replace("https://www.", "")}
+          </a>
           <button type="button" className="link mt-1.5 text-sm" onClick={() => setEditing(true)}>
             {t.pass.changeLink}
           </button>

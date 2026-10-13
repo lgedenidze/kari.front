@@ -58,7 +58,9 @@ A full-screen sheet over everything, including the dock.
    turned away before; staff notes; a button to open their Facebook profile.
 4. Two large buttons: **Deny** and **Admit**. Deny asks for a reason from six, in one more tap.
 
-The verdict is advice. Staff may admit against a red band; the log records what they saw.
+The verdict is advice. Staff may admit against a red band; the log records what they saw. The
+buttons carry the advice too: on a go the Admit button is filled and Deny is an outline, on a
+stop it is the other way round, and on a wait both are filled. Neither ever moves or goes away.
 
 After a decision a stamp — ADMITTED or DENIED — fills the screen for a beat, then the scanner
 is back. Escape closes the sheet.
@@ -76,7 +78,9 @@ and hold a ticket for coming back in.
 
 ### Log
 
-Tonight's last 40 decisions.
+Tonight's last 40 decisions. In Georgian the tab is "სია" (the list). A row opens that person
+again, in the same sheet, marked "by hand" — to see who it was, or to decide again. Nothing in
+the list is ever changed: a second answer is a second record.
 
 ## The back office — `/admin`
 
@@ -91,11 +95,11 @@ then remembered: going back to a tab already shown never waits.
 
 | Tab | File | What |
 |---|---|---|
-| Tonight | `overview.tsx` | Requests waiting; inside, passes, turned away, members; the last 14 nights as a table. |
+| Tonight | `overview.tsx` | Requests waiting; inside, passes, turned away, members; the last 14 nights as a table. A night in the table opens the door's list for that night. |
 | Requests | `requests.tsx` | The review queue, oldest first. Open the Facebook profile, then approve with one tap or reject with two: the first opens the note to the guest and a way back. |
-| People | `people.tsx` | Rows to tap on a phone, a table on a desk. Search and filter. A person's page: status, role, inviting, quota, notes for the door, password reset, door history. |
+| People | `people.tsx` | Rows to tap on a phone, a table on a desk. Search, and filters in one row that scrolls. A person's page: status, role, inviting, quota, notes for the door, password reset, door history. |
 | Nights | `nights.tsx` | "Add a night" for any date; named and changed nights by name; the next three weeks, each night a row to tap. |
-| Door log | `log.tsx` | Every decision on one night: records on a phone, a table on a desk. |
+| Door log | `log.tsx` | Every decision on one night: records on a phone, a table on a desk. Arrows step a night back and on; the date field takes any other night. In Georgian the tab is "კარის სია" (the door's list). |
 | Settings | `settings.tsx` | Opening days, door hours, the cutoff, capacity, invite defaults. |
 
 ### How many requests are waiting

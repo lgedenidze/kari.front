@@ -6,7 +6,7 @@ Read the page for an area before changing it.
 |---|---|---|
 | Structure | [structure.md](structure.md) | Routes, the three root layouts, sign-in guards, the API proxy, languages. |
 | Design | [design.md](design.md) | Ink and paper, stamps, type, the dock, where the Wox credit goes. |
-| Tickets | [tickets.md](tickets.md) | The live pass, the rotating QR, invite links, door tickets, the night calendar. |
+| Tickets | [tickets.md](tickets.md) | The live pass, the rotating QR, inviting a guest, invite links, door tickets. |
 | Door and back office | [door-and-admin.md](door-and-admin.md) | The scanner, the result sheet, walk-ins, and the admin tabs. |
 
 Bugs worth remembering are in [`../bugs/`](../bugs/README.md).

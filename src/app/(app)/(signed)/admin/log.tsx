@@ -7,22 +7,53 @@ import { useLive } from "@/components/use-live";
 import { useI18n } from "@/i18n/provider";
 import type { EntriesResponse } from "@/lib/types";
 
-/** Every decision made at the door on one night: who, when, what the scanner said, who decided. */
-export function LogTab() {
+/** The day before or after a chosen date. Plain arithmetic on the date; no clock is asked. */
+function shift(date: string, days: number): string {
+  return new Date(Date.parse(`${date}T00:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10);
+}
+
+/**
+ * Every decision made at the door on one night: who, when, what the scanner said, who decided.
+ * `night` is the night to open on, when the tab is opened from a night on the first tab.
+ */
+export function LogTab({ night: opened = "" }: { night?: string }) {
   const { t, fill, night, time } = useI18n();
-  const [picked, setPicked] = useState("");
+  const [picked, setPicked] = useState(opened);
   // One night at a time. Each night is remembered, so going back to one is immediate.
   const { data, failure } = useLive<EntriesResponse>(picked ? `/admin/entries?night=${picked}` : "/admin/entries");
+  const shown = picked || data?.night || "";
 
   return (
     <div className="space-y-5">
       <h1 className="title">{t.admin.navLog}</h1>
 
-      <label className="block max-w-[14rem]">
-        <span className="label">{t.invites.night}</span>
-        {/* The API answers with tonight first; the picker then starts from that date. */}
-        <input type="date" className="input" value={picked || data?.night || ""} onChange={(event) => setPicked(event.target.value)} />
-      </label>
+      {/* One night back, one night on: the usual question is "and the night before?". The
+          date field is still there for any other night. */}
+      <div className="flex items-end gap-2">
+        <button
+          type="button"
+          className="btn btn-line !min-h-12 w-12 flex-none !px-0"
+          aria-label={t.admin.previous}
+          disabled={!shown}
+          onClick={() => setPicked(shift(shown, -1))}
+        >
+          <Arrow back />
+        </button>
+        <label className="block min-w-0 max-w-[12rem] flex-1">
+          <span className="label">{t.invites.night}</span>
+          {/* The API answers with tonight first; the picker then starts from that date. */}
+          <input type="date" className="input" value={shown} onChange={(event) => setPicked(event.target.value)} />
+        </label>
+        <button
+          type="button"
+          className="btn btn-line !min-h-12 w-12 flex-none !px-0"
+          aria-label={t.admin.next}
+          disabled={!shown}
+          onClick={() => setPicked(shift(shown, 1))}
+        >
+          <Arrow />
+        </button>
+      </div>
 
       {failure && <FormError code={failure} />}
 
@@ -118,5 +149,13 @@ export function LogTab() {
         </>
       )}
     </div>
+  );
+}
+
+function Arrow({ back = false }: { back?: boolean }) {
+  return (
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d={back ? "M15 5.5 8.5 12l6.5 6.5" : "m9 5.5 6.5 6.5L9 18.5"} />
+    </svg>
   );
 }

@@ -11,6 +11,7 @@ export function PhotoPicker({
   onChange,
   error,
   bare = false,
+  busy = false,
 }: {
   /** A data URL, or a URL of the photo already on the account. */
   value: string | null;
@@ -18,6 +19,8 @@ export function PhotoPicker({
   error?: string;
   /** Without its own label: for a place that already says whose photo this is. */
   bare?: boolean;
+  /** The photo is on its way to the server: it is shown, dimmed, and cannot be changed again yet. */
+  busy?: boolean;
 }) {
   const { t, error: errorText } = useI18n();
   const input = useRef<HTMLInputElement>(null);
@@ -45,7 +48,16 @@ export function PhotoPicker({
         </p>
       )}
       <div className="flex items-center gap-4">
-        <div className="grid h-20 w-20 flex-none place-items-center overflow-hidden rounded-full border-2 border-ink bg-qr">
+        {/* The picture is the button too: it is the largest thing here and the first thing a
+            thumb goes for. The labelled button beside it says what the tap does. */}
+        <button
+          type="button"
+          tabIndex={-1}
+          aria-hidden="true"
+          disabled={busy}
+          onClick={() => input.current?.click()}
+          className={`grid h-20 w-20 flex-none place-items-center overflow-hidden rounded-full border-2 border-ink bg-qr transition-opacity ${busy ? "opacity-60" : ""}`}
+        >
           {shown ? (
             // eslint-disable-next-line @next/next/no-img-element -- a local data URL or an authenticated API image
             <img src={shown} alt="" className="h-full w-full object-cover" onError={() => setBroken(shown)} />
@@ -55,13 +67,13 @@ export function PhotoPicker({
               <path d="M4.5 20.5c1.2-3.6 4-5.5 7.5-5.5s6.3 1.9 7.5 5.5" strokeLinecap="round" />
             </svg>
           )}
-        </div>
+        </button>
         <div className="flex flex-wrap gap-2">
-          <button type="button" className="btn btn-line btn-small" onClick={() => input.current?.click()}>
+          <button type="button" className="btn btn-line btn-small" disabled={busy} onClick={() => input.current?.click()}>
             {value ? t.join.changePhoto : t.join.addPhoto}
           </button>
           {value && (
-            <button type="button" className="btn btn-small" onClick={() => onChange(null)}>
+            <button type="button" className="btn btn-small" disabled={busy} onClick={() => onChange(null)}>
               {t.join.removePhoto}
             </button>
           )}

@@ -122,7 +122,7 @@ await shot(staff, "door-deny");
 await staff.getByRole("button", { name: "უკან" }).click();
 await staff.getByRole("button", { name: "შემოშვება" }).click();
 await shot(staff, "door-after-admit", { settle: 1600 });
-await staff.getByRole("button", { name: "ჟურნალი" }).click();
+await staff.getByRole("button", { name: "სია" }).click();
 await shot(staff, "door-log");
 await staff.getByRole("button", { name: "სკანერი" }).click();
 await staff.getByRole("button", { name: "ბილეთი კართან" }).click();

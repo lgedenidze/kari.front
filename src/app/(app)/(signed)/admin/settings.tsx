@@ -113,16 +113,20 @@ function SettingsForm({
       </fieldset>
 
       <div className="grid gap-5 sm:grid-cols-2">
-        <label className="block">
-          <span className="label">{t.admin.doorsFrom}</span>
-          <input name="doorsOpen" type="time" required defaultValue={settings.doorsOpen} className="input" />
-          {fieldError("doorsOpen")}
-        </label>
-        <label className="block">
-          <span className="label">{t.admin.doorsTo}</span>
-          <input name="doorsClose" type="time" required defaultValue={settings.doorsClose} className="input" />
-          {fieldError("doorsClose")}
-        </label>
+        {/* Opening and closing are one thought: on a phone they share a line. From a tablet
+            up this wrapper steps aside and the two are cells of the grid like the rest. */}
+        <div className="grid grid-cols-2 gap-3 sm:contents">
+          <label className="block">
+            <span className="label">{t.admin.doorsFrom}</span>
+            <input name="doorsOpen" type="time" required defaultValue={settings.doorsOpen} className="input" />
+            {fieldError("doorsOpen")}
+          </label>
+          <label className="block">
+            <span className="label">{t.admin.doorsTo}</span>
+            <input name="doorsClose" type="time" required defaultValue={settings.doorsClose} className="input" />
+            {fieldError("doorsClose")}
+          </label>
+        </div>
         <label className="block">
           <span className="label">{t.admin.cutoff}</span>
           <select name="cutoffHour" defaultValue={settings.cutoffHour} className="input">
