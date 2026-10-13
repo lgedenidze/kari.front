@@ -1,0 +1,232 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { expect, test, type Browser, type BrowserContext, type Page } from "@playwright/test";
+
+// The seeded staff and admin logins, read from the API's committed settings.
+const seed = JSON.parse(readFileSync(join(__dirname, "../../api/src/Kari.Api/appsettings.json"), "utf8")).Kari.Seed as {
+  AdminPhone: string;
+  AdminPassword: string;
+  StaffPhone: string;
+  StaffPassword: string;
+};
+
+const PASSWORD = "e2e-guest-password";
+const run = Date.now() % 1_000_000;
+
+function newPhone(): string {
+  return `5${String(Math.floor(Math.random() * 1e8)).padStart(8, "0")}`;
+}
+
+async function english(browser: Browser): Promise<BrowserContext> {
+  const context = await browser.newContext();
+  await context.addCookies([{ name: "kari_lang", value: "en", url: "http://localhost:3000" }]);
+  return context;
+}
+
+async function signIn(browser: Browser, phone: string, password: string): Promise<Page> {
+  const page = await (await english(browser)).newPage();
+  await page.goto("/login");
+  await page.getByLabel("Phone number").fill(phone);
+  await page.getByLabel("Password").fill(password);
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await page.waitForURL("**/pass");
+  return page;
+}
+
+/** What the QR on screen encodes right now. */
+async function tokenOnScreen(page: Page): Promise<string> {
+  const qr = page.locator(".ticket svg[data-value^='K1.']");
+  await expect(qr).toBeVisible();
+  return (await qr.getAttribute("data-value"))!;
+}
+
+test("a guest joins, the bar approves, the door scans and admits, and it is in the log", async ({ browser }) => {
+  const first = "Nino";
+  const last = `Flow${run}`;
+
+  // 1. The guest asks for access through the real form.
+  const guest = await (await english(browser)).newPage();
+  await guest.goto("/join");
+  await guest.getByLabel("First name").fill(first);
+  await guest.getByLabel("Last name").fill(last);
+  await guest.getByLabel("Phone number").fill(newPhone());
+  await guest.getByLabel("Facebook profile link").fill(`facebook.com/nino.flow.${run}`);
+  await guest.getByLabel("Password").fill(PASSWORD);
+  await guest.getByText("I am 18 or older.").click();
+  await guest.getByText("I agree that the bar stores").click();
+  await guest.getByRole("button", { name: "Send request" }).click();
+
+  await guest.waitForURL("**/pass");
+  await expect(guest.getByRole("heading", { name: "Your request is with the bar" })).toBeVisible();
+
+  // 2. The admin sees the request in the queue and approves it.
+  const admin = await signIn(browser, seed.AdminPhone, seed.AdminPassword);
+  await admin.goto("/admin#requests");
+  const request = admin.locator("li", { has: admin.getByRole("heading", { name: `${first} ${last}` }) });
+  await expect(request).toBeVisible();
+  await expect(request.getByRole("link", { name: "Open Facebook profile" })).toHaveAttribute(
+    "href",
+    `https://www.facebook.com/nino.flow.${run}`,
+  );
+  await request.getByRole("button", { name: "Approve" }).click();
+  await expect(request).toBeHidden();
+
+  // 3. The guest's page notices by itself, and they claim tonight's pass.
+  await guest.getByRole("button", { name: "Get tonight's pass" }).click();
+  await expect(guest.locator(".ticket")).toContainText(first);
+  await expect(guest.locator(".ticket")).toContainText(last);
+  await expect(guest.getByText("Show this at the door")).toBeVisible();
+  const token = await tokenOnScreen(guest);
+  expect(token).toMatch(/^K1\.[0-9A-Z]{16}\.[0-9A-Z]{8}$/);
+
+  // 4. The door scans that exact code. (A headless browser has no camera, so the token the
+  //    camera would have read is posted the way the scanner posts it.)
+  const staff = await signIn(browser, seed.StaffPhone, seed.StaffPassword);
+  const scan = await staff.request.post("/api/door/scan", { data: { token } });
+  expect(scan.ok()).toBe(true);
+  const scanned = await scan.json();
+  expect(scanned.verdict).toBe("ok");
+  expect(scanned.person.lastName).toBe(last);
+
+  // 5. Staff decide in the real door screen: find the guest, read the card, tap Admit.
+  await staff.goto("/door");
+  await staff.getByRole("button", { name: "Find" }).click();
+  await staff.getByPlaceholder("Name, phone, personal number or code").fill(last);
+  await staff.getByRole("button", { name: new RegExp(`${first} ${last}`) }).click();
+  const sheet = staff.getByRole("dialog");
+  await expect(sheet).toContainText("Valid pass");
+  await expect(sheet).toContainText(last);
+  await sheet.getByRole("button", { name: "Admit" }).click();
+  await expect(sheet).toBeHidden();
+
+  // 6. The guest's phone flips to "in" without a reload.
+  await expect(guest.getByText(/You are in since \d\d:\d\d/)).toBeVisible();
+  await expect(guest.getByRole("img", { name: "ADMITTED" })).toBeVisible();
+
+  // 7. The decision is in the admin's door log.
+  await admin.goto("/admin#log");
+  const row = admin.getByRole("row", { name: new RegExp(`${first} ${last}`) });
+  await expect(row).toContainText("Admitted");
+  await expect(row).toContainText("Door Staff");
+
+  // 8. A second scan is a re-entry, not a rejection.
+  const again = await (await staff.request.post("/api/door/scan", { data: { token: await tokenOnScreen(guest) } })).json();
+  expect(again.verdict).toBe("reentry");
+});
+
+test("a member invites a named guest, who gets a ticket with no account", async ({ browser }) => {
+  const last = `Host${run}`;
+
+  // A verified member with inviting switched on.
+  const host = await (await english(browser)).newPage();
+  const register = await host.request.post("/api/auth/register", {
+    data: {
+      firstName: "Keti", lastName: last, phone: newPhone(), password: PASSWORD,
+      facebookUrl: `keti.host.${run}`, lang: "en", adult: true, consent: true,
+    },
+  });
+  expect(register.ok()).toBe(true);
+  const me = await register.json();
+
+  const admin = await signIn(browser, seed.AdminPhone, seed.AdminPassword);
+  expect((await admin.request.post(`/api/admin/users/${me.id}/review`, { data: { decision: "approve" } })).ok()).toBe(true);
+  expect((await admin.request.patch(`/api/admin/users/${me.id}`, { data: { inviteMode: "on" } })).ok()).toBe(true);
+
+  // The member fills in the invite: first name, last name, and the optional personal number.
+  await host.goto("/invites");
+  await host.getByLabel("Guest's first name").fill("Davit");
+  await host.getByLabel("Guest's last name").fill(`Guest${run}`);
+  await host.getByLabel("Personal number").fill("01024012345");
+  await host.getByRole("button", { name: "Create invite" }).click();
+  await expect(host.getByRole("heading", { name: "Invite ready" })).toBeVisible();
+
+  const link = await host.locator("svg[data-value*='/i/']").getAttribute("data-value");
+  expect(link).toMatch(/\/i\/[a-z0-9]{14}$/);
+
+  // The guest opens the link in a browser that has never signed in.
+  const guest = await (await english(browser)).newPage();
+  await guest.goto(new URL(link!).pathname);
+  await expect(guest.getByRole("heading", { name: `Keti ${last} invited you` })).toBeVisible();
+  await expect(guest.locator(".ticket")).toContainText(`Guest${run}`);
+  // The link can be forwarded, so it never shows the whole personal number.
+  await expect(guest.locator(".ticket")).toContainText("••••••••345");
+  await expect(guest.locator(".ticket")).not.toContainText("01024012345");
+
+  await guest.getByRole("button", { name: "Accept and get my ticket" }).click();
+  const token = await tokenOnScreen(guest);
+
+  // At the door: the name, the full personal number to check against an ID, and who vouched.
+  const staff = await signIn(browser, seed.StaffPhone, seed.StaffPassword);
+  const scanned = await (await staff.request.post("/api/door/scan", { data: { token } })).json();
+  expect(scanned.verdict).toBe("ok");
+  expect(scanned.person.firstName).toBe("Davit");
+  expect(scanned.person.personalNumber).toBe("01024012345");
+  expect(scanned.inviter.name).toBe(`Keti ${last}`);
+
+  const decided = await staff.request.post("/api/door/decide", {
+    data: { passId: scanned.pass.id, decision: "admitted", verdict: scanned.verdict, method: "scan" },
+  });
+  expect(decided.ok()).toBe(true);
+
+  await expect(guest.getByText(/You are in since \d\d:\d\d/)).toBeVisible();
+
+  // The member sees that their guest came in.
+  await host.reload();
+  await expect(host.locator("li", { hasText: `Guest${run}` })).toContainText("Came in");
+});
+
+test("staff issue a ticket at the door, and it opens on the walk-in's own phone", async ({ browser }) => {
+  const staff = await signIn(browser, seed.StaffPhone, seed.StaffPassword);
+  await staff.goto("/door");
+  await staff.getByRole("button", { name: "Ticket at the door" }).click();
+
+  const form = staff.getByRole("dialog");
+  await form.getByLabel("First name").fill("Aleko");
+  await form.getByLabel("Last name").fill(`Walkin${run}`);
+  await form.getByRole("button", { name: "Admit and issue ticket" }).click();
+  await expect(form.getByRole("heading", { name: "Ticket issued" })).toBeVisible();
+
+  // The QR staff show the walk-in is a link to their own live ticket.
+  const link = await form.locator("svg[data-value*='/t/']").getAttribute("data-value");
+  const phone = await (await english(browser)).newPage();
+  await phone.goto(new URL(link!).pathname);
+  await expect(phone.locator(".ticket")).toContainText(`Walkin${run}`);
+  await expect(phone.locator(".ticket")).toContainText("Door ticket");
+  await expect(phone.getByRole("img", { name: "ADMITTED" })).toBeVisible();
+
+  // Coming back in later, their own code scans as a re-entry.
+  const scanned = await (await staff.request.post("/api/door/scan", { data: { token: await tokenOnScreen(phone) } })).json();
+  expect(scanned.verdict).toBe("reentry");
+});
+
+test("the door and the back office turn everyone else away", async ({ browser }) => {
+  const visitor = await (await english(browser)).newPage();
+  await visitor.goto("/door");
+  await expect(visitor).toHaveURL(/\/login\?next=%2Fdoor$/);
+  await visitor.goto("/admin");
+  await expect(visitor).toHaveURL(/\/login\?next=%2Fadmin$/);
+
+  // Staff can work the door but not the back office.
+  const staff = await signIn(browser, seed.StaffPhone, seed.StaffPassword);
+  await staff.goto("/admin");
+  await expect(staff).toHaveURL(/\/pass$/);
+  expect((await staff.request.get("/api/admin/overview")).status()).toBe(403);
+});
+
+test("the public pages are indexable, in both languages", async ({ browser }) => {
+  const page = await (await browser.newContext()).newPage();
+
+  await page.goto("/");
+  await expect(page.locator("html")).toHaveAttribute("lang", "ka");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("კარმა შენი სახელი იცის.");
+  await expect(page.locator("link[rel='alternate'][hreflang='en']")).toHaveAttribute("href", /\/en$/);
+  await expect(page.getByRole("link", { name: /powered by wox\.ge/ }).first()).toBeVisible();
+
+  await page.goto("/en");
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("The door knows your name.");
+
+  expect((await page.request.get("/sitemap.xml")).ok()).toBe(true);
+  const robots = await (await page.request.get("/robots.txt")).text();
+  expect(robots).toContain("Disallow: /admin");
+});

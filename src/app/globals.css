@@ -1,0 +1,462 @@
+@import "tailwindcss";
+
+/*
+  Two materials: stamp ink and cloakroom-ticket paper.
+
+  The ground is ink. Anything a guest holds — a pass, an invite, a form — is paper laid on it.
+  A pass is bright paper because that is what a scanner reads best; the ground stays dark so a
+  phone held up in a queue does not light the street. Every status in the product is a round
+  door stamp: verified, admitted, denied.
+
+  The palette is deliberately not Wox's purple. The bar owns this look.
+*/
+@theme {
+  /* ink — the ground */
+  --color-ink: #14235e;
+  --color-ink-deep: #0c1740;
+  --color-ink-raised: #1d2f78;
+  --color-ink-line: #34489b;
+  --color-ink-soft: #a9b6e6; /* quiet text on ink, 7:1 */
+
+  /* paper — what guests hold */
+  --color-paper: #f4d4d7;
+  --color-paper-light: #fbecee;
+  --color-paper-line: #dfaab1;
+  --color-paper-soft: #4d5a8f; /* quiet text on paper, 5:1 */
+  --color-qr: #fffafa; /* the QR window: as white as the stock gets */
+
+  /* stamp-pad inks, for marks on paper */
+  --color-stamp-blue: #2447d8;
+  --color-stamp-red: #b3122e;
+  --color-stamp-green: #0b6b41;
+
+  /* door signals, for marks on ink */
+  --color-go: #46d893;
+  --color-stop: #ff6b7f;
+  --color-wait: #ffc44d;
+
+  /* the back office: a desk in daylight */
+  --color-desk: #f7f4f5;
+  --color-desk-line: #e3dcdf;
+  --color-desk-soft: #5f6480;
+
+  --font-sans: var(--font-noto), "Noto Sans Georgian", "Helvetica Neue", Arial, sans-serif;
+
+  --ease-thump: cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  body {
+    --wox-dot: #b3a4ff;
+    background: var(--color-ink);
+    color: var(--color-paper-light);
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* One family, two widths. Headlines use the condensed cut — in Georgian and in Latin. */
+  h1,
+  h2,
+  .display {
+    font-variation-settings: "wdth" 70;
+    font-weight: 800;
+    line-height: 1.02;
+    letter-spacing: -0.005em;
+    text-wrap: balance;
+  }
+
+  h3 {
+    font-weight: 700;
+    line-height: 1.25;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  :focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+
+  ::selection {
+    background: var(--color-paper);
+    color: var(--color-ink);
+  }
+
+  button,
+  [role="button"],
+  a {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button:not(:disabled),
+  [role="button"] {
+    cursor: pointer;
+  }
+}
+
+@layer components {
+  /* ---------- buttons ---------- */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 3rem;
+    padding: 0.7rem 1.25rem;
+    border-radius: 999px;
+    border: 2px solid transparent;
+    font-weight: 700;
+    font-size: 1rem;
+    line-height: 1.2;
+    text-align: center;
+    transition:
+      transform 120ms ease,
+      background-color 120ms ease,
+      border-color 120ms ease;
+  }
+  .btn:active:not(:disabled) {
+    transform: translateY(1px) scale(0.985);
+  }
+  .btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
+  /* the main action on ink: a piece of paper */
+  .btn-paper {
+    background: var(--color-paper);
+    color: var(--color-ink-deep);
+  }
+  .btn-paper:hover:not(:disabled) {
+    background: var(--color-paper-light);
+  }
+
+  /* the main action on paper or desk: filled with ink */
+  .btn-ink {
+    background: var(--color-ink);
+    color: var(--color-paper-light);
+  }
+  .btn-ink:hover:not(:disabled) {
+    background: var(--color-ink-raised);
+  }
+
+  /* a second action: an outline in whatever colour the text is */
+  .btn-line {
+    border-color: currentColor;
+    background: transparent;
+  }
+  .btn-line:hover:not(:disabled) {
+    background: rgb(127 127 127 / 0.14);
+  }
+
+  .btn-go {
+    background: var(--color-go);
+    color: var(--color-ink-deep);
+  }
+  .btn-stop {
+    background: var(--color-stop);
+    color: var(--color-ink-deep);
+  }
+  .btn-danger {
+    background: var(--color-stamp-red);
+    color: #fff;
+  }
+
+  .btn-big {
+    min-height: 4.25rem;
+    font-size: 1.3rem;
+    font-variation-settings: "wdth" 80;
+    font-weight: 800;
+  }
+
+  .btn-small {
+    min-height: 2.5rem;
+    padding: 0.4rem 0.9rem;
+    font-size: 0.9rem;
+  }
+
+  .link {
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+    text-decoration-thickness: 1.5px;
+    font-weight: 600;
+  }
+  .link:hover {
+    text-decoration-thickness: 2.5px;
+  }
+
+  /* ---------- forms: always on paper or desk, never on ink ---------- */
+  .label {
+    display: block;
+    font-weight: 700;
+    font-size: 0.95rem;
+    margin-bottom: 0.35rem;
+  }
+  .input {
+    display: block;
+    width: 100%;
+    min-height: 3rem;
+    padding: 0.65rem 0.85rem;
+    border-radius: 12px;
+    border: 2px solid var(--color-ink);
+    background: var(--color-qr);
+    color: var(--color-ink-deep);
+    font-size: 1rem; /* 16px keeps iOS from zooming on focus */
+    font-family: inherit;
+  }
+  .input::placeholder {
+    color: #8a8fae;
+  }
+  .input:focus-visible {
+    outline: 3px solid var(--color-stamp-blue);
+    outline-offset: 1px;
+    border-radius: 12px;
+  }
+  .input[aria-invalid="true"] {
+    border-color: var(--color-stamp-red);
+  }
+  .hint {
+    margin-top: 0.35rem;
+    font-size: 0.875rem;
+    color: var(--color-paper-soft);
+  }
+  .field-error {
+    margin-top: 0.35rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-stamp-red);
+  }
+  .notice-error {
+    border: 2px solid var(--color-stamp-red);
+    color: var(--color-stamp-red);
+    background: var(--color-qr);
+    border-radius: 12px;
+    padding: 0.75rem 0.9rem;
+    font-weight: 600;
+  }
+
+  .check {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+  }
+  .check input {
+    appearance: none;
+    flex: none;
+    width: 1.5rem;
+    height: 1.5rem;
+    margin-top: 0.1rem;
+    border: 2px solid var(--color-ink);
+    border-radius: 6px;
+    background: var(--color-qr);
+    display: grid;
+    place-content: center;
+  }
+  .check input::after {
+    content: "";
+    width: 0.8rem;
+    height: 0.45rem;
+    border-left: 3px solid var(--color-qr);
+    border-bottom: 3px solid var(--color-qr);
+    transform: translateY(-1px) rotate(-45deg);
+    opacity: 0;
+  }
+  .check input:checked {
+    background: var(--color-ink);
+  }
+  .check input:checked::after {
+    opacity: 1;
+  }
+  .check input[aria-invalid="true"] {
+    border-color: var(--color-stamp-red);
+  }
+
+  /* ---------- paper ---------- */
+  .paper {
+    background: var(--color-paper);
+    color: var(--color-ink);
+    border-radius: 20px;
+  }
+
+  /* The dot in the Wox mark keeps Wox's purple on paper, and a lighter tint of it on ink. */
+  .paper,
+  .ticket {
+    --wox-dot: #7b5fcb;
+  }
+
+  /*
+    A ticket: paper with a tear line. The two notches are discs in the colour of whatever the
+    ticket lies on — set --ground when that is not ink.
+  */
+  .ticket {
+    position: relative;
+    background: var(--color-paper);
+    color: var(--color-ink);
+    border-radius: 22px;
+  }
+  .ticket-tear {
+    position: relative;
+    height: 0;
+    margin: 0 1.25rem;
+    border-top: 2.5px dotted var(--color-paper-line);
+  }
+  .ticket-tear::before,
+  .ticket-tear::after {
+    content: "";
+    position: absolute;
+    top: -0.8rem;
+    width: 1.6rem;
+    height: 1.6rem;
+    border-radius: 50%;
+    background: var(--ground, var(--color-ink));
+  }
+  .ticket-tear::before {
+    left: -2.05rem;
+  }
+  .ticket-tear::after {
+    right: -2.05rem;
+  }
+
+  /* the thirty-second countdown runs along the tear line */
+  .ticket-tear-progress {
+    position: absolute;
+    top: -2.5px;
+    left: 0;
+    height: 0;
+    border-top: 2.5px dotted var(--color-ink);
+  }
+
+  /* ---------- stamp ---------- */
+  .stamp {
+    display: block;
+    transform: rotate(var(--tilt, -9deg));
+    opacity: 0.92;
+    mix-blend-mode: multiply;
+    pointer-events: none;
+  }
+  .stamp-on-ink {
+    mix-blend-mode: normal;
+  }
+  .stamp-thump {
+    animation: stamp-thump 520ms var(--ease-thump) both;
+  }
+
+  /* ---------- the member's dock ---------- */
+
+  /* Content scrolls behind the floating dock; fade it out so the two never tangle. */
+  .tab-dock {
+    background: linear-gradient(to top, var(--ground, var(--color-ink)) 55%, transparent);
+  }
+
+  /* Where you are: a ticket stub, with the same side notches as every ticket in the app.
+     It slides to the tab you tap. */
+  .tab-stub {
+    border-radius: 1.2rem;
+    background: var(--color-paper);
+    transition: transform 320ms cubic-bezier(0.3, 1.25, 0.45, 1);
+  }
+  .tab-stub::before,
+  .tab-stub::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    width: 0.7rem;
+    height: 0.7rem;
+    margin-top: -0.35rem;
+    border-radius: 50%;
+    background: var(--color-ink-deep);
+  }
+  .tab-stub::before {
+    left: -0.35rem;
+  }
+  .tab-stub::after {
+    right: -0.35rem;
+  }
+
+  /* ---------- small pieces ---------- */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.15rem 0.6rem;
+    border-radius: 999px;
+    border: 1.5px solid currentColor;
+    font-size: 0.8rem;
+    font-weight: 700;
+    line-height: 1.5;
+    white-space: nowrap;
+  }
+
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* a short code read aloud at the door: wide, heavy, unmistakable */
+  .code {
+    font-variation-settings: "wdth" 100;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .rise {
+    animation: rise 260ms ease-out both;
+  }
+}
+
+@keyframes stamp-thump {
+  0% {
+    opacity: 0;
+    transform: rotate(calc(var(--tilt, -9deg) - 14deg)) scale(1.9);
+  }
+  55% {
+    opacity: 1;
+    transform: rotate(var(--tilt, -9deg)) scale(0.94);
+  }
+  100% {
+    opacity: 0.92;
+    transform: rotate(var(--tilt, -9deg)) scale(1);
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse-line {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stamp-thump,
+  .rise {
+    animation: none;
+  }
+  .btn,
+  .tab-stub {
+    transition: none;
+  }
+}
