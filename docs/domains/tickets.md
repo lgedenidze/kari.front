@@ -104,21 +104,48 @@ as a door ticket is: someone opening the link sees the ticket in the first paint
 - The personal number is masked here. The link can be forwarded.
 - The member who sent it sees its state and a link to manage invites — never the guest's QR.
 
-## Save to phone
+## Keeping a ticket
 
-`components/save-to-phone.tsx`, under every live ticket. It puts the ticket on the home screen,
-where it opens like an app.
+`components/save-to-phone.tsx`, under every live ticket. Two buttons.
+
+### Download ticket
+
+The ticket as a picture: a 1080×1920 PNG in the app's own ink and paper, with the bar's name,
+the guest's name, the night, the short code set large, and the Wox credit.
+
+- It is drawn on the server (`lib/ticket-image.tsx`, with `ImageResponse`), so it is the same
+  picture on every phone. Each kind of ticket has its address: `/pass/ticket.png`,
+  `/i/{code}/ticket.png`, `/t/{token}/ticket.png`. The same rules as the page apply — the pass
+  needs the session, the other two only the link.
+- On a phone the button opens the share sheet with the file, where "Save Image" puts it in
+  Photos and the same sheet sends it to a friend. On a computer it is a plain download. The
+  picture starts being fetched as the finger lands (`onPointerDown`): a phone opens its share
+  sheet only while it still counts the tap as the reason.
+- Satori, which draws it, needs static fonts. They are in `assets/fonts/` (see the README
+  there) and `next.config.ts` ships them with these routes.
+
+**What its QR is.** A live pass shows a new code every thirty seconds, so a picture can never
+carry it — and must never carry the key that makes it. The QR in the picture is the ticket's
+own address with its short code: `/pass?c=1AD0H6`. Any camera that reads it opens the live
+ticket. The door's scanner reads it too (`lib/saved-ticket.ts`) and looks the guest up by
+that short code — the same lookup as typing it into Find, logged as "by hand". It is not an
+admission by itself: staff see the name and decide.
+
+### Add to home screen
+
+Puts the live ticket itself on the home screen, where it opens like an app.
 
 - Android and desktop Chrome: the browser's own install dialog (`beforeinstallprompt`).
 - iPhone: Safari has nothing to call, so a sheet shows the taps, with the Share glyph.
-- Already running from the home screen: the button is not shown.
+- Already running from the home screen: this button is not shown.
 - An invite link and a door ticket each serve **their own manifest**, so the saved icon opens
   that ticket and not the members' pass page.
 
-It is deliberately not "Add to Apple/Google Wallet". A Wallet pass carries one fixed barcode;
-this ticket's defence against screenshots is that its code changes every thirty seconds.
-Real Wallet passes would also need an Apple Pass Type certificate and a Google Wallet issuer
-account. Google Wallet does support rotating barcodes, so that route is open if the bar wants it.
+Neither button is "Add to Apple/Google Wallet", on purpose. A Wallet pass carries one fixed
+barcode; this ticket's defence against screenshots is that its code changes every thirty
+seconds. Real Wallet passes would also need an Apple Pass Type certificate and a Google Wallet
+issuer account. Google Wallet does support rotating barcodes, so that route is open if the bar
+wants it.
 
 ## Watch out
 

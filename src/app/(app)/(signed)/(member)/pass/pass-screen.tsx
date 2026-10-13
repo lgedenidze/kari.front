@@ -14,6 +14,7 @@ import { useLive } from "@/components/use-live";
 import { useI18n } from "@/i18n/provider";
 import { api, isApiError } from "@/lib/api";
 import type { Me, TonightResponse } from "@/lib/types";
+import { venue } from "@/venue";
 
 /** The pass on its way: the one placeholder this screen has, here and in loading.tsx. */
 export function PassSkeleton() {
@@ -70,7 +71,7 @@ export function PassScreen({ first }: { first: TonightResponse | null }) {
       {ticket ? (
         <>
           <LiveTicket ticket={ticket} serverTime={data.serverTime} tonight={tonight.night} />
-          <SaveToPhone />
+          <SaveToPhone image="/pass/ticket.png" fileName={`${venue.name.toLowerCase()}-${ticket.shortCode}`} />
         </>
       ) : me.status === "banned" ? (
         <StatusCard title={t.pass.bannedTitle} body={t.pass.bannedBody} stamp={<Stamp word={t.status.banned} ink="red" size={104} />} />

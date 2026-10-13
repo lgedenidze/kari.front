@@ -13,6 +13,9 @@ const nextConfig: NextConfig = {
   // show a stale pass. The classic request-time model fits that; Cache Components does not.
   cacheComponents: false,
   poweredByHeader: false,
+  // The ticket picture (lib/ticket-image.tsx) reads its fonts from disk when it is asked for.
+  // They are not imported, so say plainly that they belong to those routes.
+  outputFileTracingIncludes: { "/**/ticket.png": ["./assets/fonts/*.ttf"] },
   turbopack: {
     rules: {
       "*.css": {

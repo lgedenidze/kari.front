@@ -11,6 +11,7 @@ import { useLive } from "@/components/use-live";
 import { useI18n } from "@/i18n/provider";
 import { api, isApiError } from "@/lib/api";
 import type { InviteLinkResponse } from "@/lib/types";
+import { venue } from "@/venue";
 
 export function InviteScreen({ code, first }: { code: string; first: InviteLinkResponse | null }) {
   const { t, fill, night } = useI18n();
@@ -65,7 +66,7 @@ export function InviteScreen({ code, first }: { code: string; first: InviteLinkR
     return (
       <div className="flex w-full flex-col items-center gap-5">
         <LiveTicket ticket={data.ticket} serverTime={data.serverTime} tonight={data.tonight} />
-        <SaveToPhone />
+        <SaveToPhone image={`/i/${encodeURIComponent(code)}/ticket.png`} fileName={`${venue.name.toLowerCase()}-${data.ticket.shortCode}`} />
         <p className="text-center text-sm text-ink-soft">{t.ticket.keepPage}</p>
         {failure && (
           <div className="w-full">

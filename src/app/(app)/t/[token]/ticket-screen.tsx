@@ -7,6 +7,7 @@ import { SaveToPhone } from "@/components/save-to-phone";
 import { useLive } from "@/components/use-live";
 import { useI18n } from "@/i18n/provider";
 import type { TicketResponse } from "@/lib/types";
+import { venue } from "@/venue";
 
 export function TicketScreen({ token, first }: { token: string; first: TicketResponse | null }) {
   const { t } = useI18n();
@@ -34,7 +35,7 @@ export function TicketScreen({ token, first }: { token: string; first: TicketRes
   return (
     <div className="flex w-full flex-col items-center gap-5">
       <LiveTicket ticket={data.ticket} serverTime={data.serverTime} tonight={data.tonight} />
-      <SaveToPhone />
+      <SaveToPhone image={`/t/${encodeURIComponent(token)}/ticket.png`} fileName={`${venue.name.toLowerCase()}-${data.ticket.shortCode}`} />
       <p className="text-center text-sm text-ink-soft">{t.ticket.keepPage}</p>
     </div>
   );

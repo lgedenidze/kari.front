@@ -35,6 +35,9 @@ simply there from the tap, and the picture appears in it.
 - The instant a code is read the scanner says "checking…" and the corners turn green, before
   the server answers. On a slow connection this is what stops staff waving the phone about.
 - A QR that is not a pass gets a short notice under the camera, not a full-screen result.
+- A ticket saved as a picture is read as well. Its QR is the ticket's address with the short
+  code on the end; the scanner looks the guest up by that code and opens the usual sheet,
+  marked "by hand". See tickets.md, "Download ticket".
 - The camera keeps running while a result is up but stops reading, so it is ready at once.
 - The screen is kept awake; the camera is started again if the phone took it away; a torch
   button appears where the device has one.

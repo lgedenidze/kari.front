@@ -11,6 +11,7 @@ import { Stamp } from "@/components/stamp";
 import { useLive } from "@/components/use-live";
 import { useI18n } from "@/i18n/provider";
 import { api, isApiError } from "@/lib/api";
+import { savedTicketCode } from "@/lib/saved-ticket";
 import type { DecideResponse, Decision, DoorTonight, Entry, ScanResult, SearchHit, Verdict, WalkInResponse } from "@/lib/types";
 import { Scanner, ScannerStarting } from "./scanner";
 
@@ -147,6 +148,20 @@ export function DoorScreen({ first }: { first: DoorTonight | null }) {
     setChecking(true);
     navigator.vibrate?.(35);
     try {
+      // A ticket saved as a picture: its QR is not a pass code, but it names the pass. Look
+      // the guest up by that, exactly as if staff had typed the short code into Find.
+      const saved = savedTicketCode(token);
+      if (saved) {
+        const hits = await api.get<SearchHit[]>(`/door/search?q=${encodeURIComponent(saved)}`);
+        const hit = hits.find((found) => found.passId);
+        if (hit) {
+          navigator.vibrate?.([90, 70, 90]);
+          setResult(await api.get<ScanResult>(`/door/pass/${hit.passId}`));
+          setChecking(false);
+          busy.current = false;
+          return;
+        }
+      }
       const scanned = await api.post<ScanResult>("/door/scan", { token });
       if (scanned.verdict === "unknown") {
         navigator.vibrate?.([90, 70, 90]);

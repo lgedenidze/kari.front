@@ -1,13 +1,20 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useI18n } from "@/i18n/provider";
 
-// "Save to phone" puts the live ticket on the home screen, where it opens like an app.
+// Two ways to keep a ticket, under every live one.
 //
-// It is deliberately not "Add to Apple/Google Wallet". A Wallet pass carries one fixed barcode,
+// "Download ticket" hands over the ticket as a picture (lib/ticket-image.tsx): on a phone it
+// goes through the share sheet, where "Save Image" puts it in Photos and the same sheet sends
+// it to a friend; on a computer it is a plain download. The picture carries the name, the
+// night and the short code, and a QR that opens the live ticket.
+//
+// "Add to home screen" keeps the live ticket itself one tap away, where it opens like an app.
+//
+// Neither is "Add to Apple/Google Wallet", on purpose. A Wallet pass carries one fixed barcode,
 // and this ticket's whole defence against screenshots is that its code changes every thirty
-// seconds. Saved to the home screen, the ticket stays the real, live one.
+// seconds.
 
 /** Chrome's install prompt. It fires once, early, so it is caught for the whole page. */
 type InstallPrompt = Event & { prompt: () => Promise<void> };
@@ -47,11 +54,76 @@ function isIos(): boolean {
   return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 }
 
-export function SaveToPhone() {
+/** The picture, fetched once per address and kept: a second tap does not draw it again. */
+function fetchPicture(image: string): Promise<Blob> {
+  return fetch(image, { credentials: "same-origin" }).then((response) => {
+    if (!response.ok) throw new Error(`ticket image: ${response.status}`);
+    return response.blob();
+  });
+}
+
+export function SaveToPhone({
+  image,
+  fileName,
+}: {
+  /** Where this ticket's picture is served, e.g. "/pass/ticket.png". */
+  image: string;
+  /** What the saved file is called, without the extension. */
+  fileName: string;
+}) {
   const { t } = useI18n();
   const canPrompt = useSyncExternalStore(subscribeToPrompt, () => installPrompt !== null, () => false);
   const standalone = useSyncExternalStore(subscribeToStandalone, isStandalone, () => false);
   const [help, setHelp] = useState<"ios" | "other" | null>(null);
+  const [making, setMaking] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const picture = useRef<{ image: string; blob: Promise<Blob> } | null>(null);
+
+  function pictureFor(): Promise<Blob> {
+    if (picture.current?.image !== image) picture.current = { image, blob: fetchPicture(image) };
+    return picture.current.blob;
+  }
+
+  // Start drawing the moment a finger lands, before the tap is complete. A phone only opens
+  // its share sheet while it still counts the tap as the reason — every moment saved matters.
+  function warm() {
+    void pictureFor().catch(() => {
+      picture.current = null;
+    });
+  }
+
+  async function download() {
+    setMaking(true);
+    setFailed(false);
+    try {
+      const blob = await pictureFor();
+      const file = new File([blob], `${fileName}.png`, { type: "image/png" });
+      // On a phone the share sheet is the download: "Save Image" puts it in Photos.
+      const touch = window.matchMedia("(pointer: coarse)").matches;
+      if (touch && navigator.canShare?.({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file] });
+          return;
+        } catch (error) {
+          // Closed the sheet: that is an answer. Anything else, fall through to a plain download.
+          if (error instanceof DOMException && error.name === "AbortError") return;
+        }
+      }
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = file.name;
+      document.body.append(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 30_000);
+    } catch {
+      picture.current = null;
+      setFailed(true);
+    } finally {
+      setMaking(false);
+    }
+  }
 
   // Esc closes the instructions.
   useEffect(() => {
@@ -60,8 +132,6 @@ export function SaveToPhone() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [help]);
-
-  if (standalone) return null;
 
   async function save() {
     if (canPrompt && installPrompt) {
@@ -75,15 +145,40 @@ export function SaveToPhone() {
 
   return (
     <>
-      <div className="w-full max-w-[22rem] text-center">
-        <button type="button" className="btn btn-line w-full text-paper-light" onClick={save}>
+      <div className="w-full max-w-[22rem] space-y-2.5 text-center">
+        <button
+          type="button"
+          className="btn btn-paper w-full"
+          onPointerDown={warm}
+          onClick={download}
+          disabled={making}
+          aria-live="polite"
+        >
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <rect x="6" y="2.5" width="12" height="19" rx="3" />
-            <path d="M12 8v6M9.5 11.5 12 14l2.5-2.5" />
+            <path d="M12 3.5v11M7.5 10.5 12 15l4.5-4.5" />
+            <path d="M4.5 16.5v2a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-2" />
           </svg>
-          {t.ticket.saveToPhone}
+          {making ? t.ticket.downloading : t.ticket.download}
         </button>
-        <p className="mt-2 text-sm text-ink-soft">{t.ticket.saveHint}</p>
+        {failed && (
+          <p role="alert" className="notice-error text-left">
+            {t.ticket.downloadFailed}
+          </p>
+        )}
+
+        {/* Already opened from the home screen: there is nothing left to add. */}
+        {!standalone && (
+          <>
+            <button type="button" className="btn btn-line w-full text-paper-light" onClick={save}>
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <rect x="6" y="2.5" width="12" height="19" rx="3" />
+                <path d="M12 9v6M9 12h6" />
+              </svg>
+              {t.ticket.saveToPhone}
+            </button>
+            <p className="text-sm text-ink-soft">{t.ticket.saveHint}</p>
+          </>
+        )}
       </div>
 
       {help && (

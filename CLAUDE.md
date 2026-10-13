@@ -43,14 +43,16 @@ src/
         admin/           the back office (admin)
     api/[...path]/       passes every /api/* call on to the .NET API
     manifest.webmanifest/  the home-screen manifest; invite and ticket pages serve their own
+    …/ticket.png/        the ticket as a picture, for the download button (pass, invite, door ticket)
     sitemap.ts robots.ts icon.svg apple-icon.png
   components/            ticket, live-ticket, stamp, qr, night-picker, app-chrome (dock), brand, icons,
                          loading (skeletons), use-live (a screen's data), save-to-phone
   i18n/                  en.ts, ka.ts, formatters, provider
   lib/                   api (browser), server-api (server), live-store (what each screen last heard),
                          pass-code, scan-presence, web-manifest, types, photo
+assets/fonts/            static fonts for the ticket picture (the app itself uses next/font)
 e2e/                     flow.spec.ts (the journeys), loading.spec.ts (how a screen arrives, on a slowed
-                         server); phone-audit.mjs, warm-tabs.mjs
+                         server), ticket-image.spec.ts; phone-audit.mjs, warm-tabs.mjs, ticket-image.mjs
 ```
 
 **Before working on an area, read its page under [`docs/domains/`](docs/domains/README.md).**
@@ -86,6 +88,8 @@ e2e/                     flow.spec.ts (the journeys), loading.spec.ts (how a scr
 - **Nothing that wraps a screen may keep a transform** — it traps every full-screen sheet
   inside the screen (BUG-0003).
 - **No stamp, badge or overlay on a QR code.** It breaks the scan.
+- **The pass key and the live code never leave the live ticket.** The downloadable picture
+  carries the ticket's address and short code, nothing that admits by itself.
 - **Check every screen at phone size before calling UI work done:** `node e2e/phone-audit.mjs 360`
   photographs all of them into `test-results/phone/` and reports any that scroll sideways.
   `node e2e/find-overflow.mjs <path>` names the element at fault.
