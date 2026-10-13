@@ -48,6 +48,7 @@ src/
     api/[...path]/       passes every /api/* call on to the .NET API
     manifest.webmanifest/  the home-screen manifest; invite and ticket pages serve their own
     …/ticket.png/        the ticket as a picture, for the download button (pass, invite, door ticket)
+    …/wallet.pkpass/     the ticket for an iPhone's Wallet, beside each picture
     sitemap.ts robots.ts icon.svg apple-icon.png
   components/            ticket, live-ticket, stamp, qr, night-picker, app-chrome (dock), brand, icons, face,
                          return-action (the landing page's action for someone who comes back),
@@ -56,8 +57,11 @@ src/
   lib/                   api (browser), server-api (server), live-store (what each screen last heard),
                          known-here (what this phone remembers, for the public pages),
                          profile-link (the name of the network a guest's profile is on),
-                         pass-code, scan-presence, web-manifest, types, photo
+                         pass-code, scan-presence, web-manifest, types, photo,
+                         pkpass (builds and signs a Wallet pass file), wallet-ticket (what a ticket
+                         says in Wallet), wallet-pass (the certificate, and the answer to the phone)
 assets/fonts/            static fonts for the ticket picture (the app itself uses next/font)
+assets/wallet/           a Wallet pass's icon and logo, and Apple's public intermediate certificate
 e2e/                     flow.spec.ts (the journeys), loading.spec.ts (how a screen arrives, on a slowed
                          server), ticket-image.spec.ts; phone-audit.mjs, warm-tabs.mjs, ticket-image.mjs
 ```
@@ -96,7 +100,7 @@ e2e/                     flow.spec.ts (the journeys), loading.spec.ts (how a scr
   inside the screen (BUG-0003).
 - **No stamp, badge or overlay on a QR code.** It breaks the scan.
 - **The pass key and the live code never leave the live ticket.** The downloadable picture
-  carries the ticket's address and short code, nothing that admits by itself.
+  and the Wallet pass carry the ticket's address and short code, nothing that admits by itself.
 - **Check every screen at phone size before calling UI work done:** `node e2e/phone-audit.mjs 360`
   photographs all of them into `test-results/phone/` and reports any that scroll sideways.
   `node e2e/find-overflow.mjs <path>` names the element at fault.
@@ -121,6 +125,7 @@ stub of every pass, and under the sign-in forms. Keep it small; the bar's name i
 |---|---|
 | `API_URL` | Where the .NET API is. Server-side only. Read at request time. |
 | `NEXT_PUBLIC_SITE_URL` | This site's public address, for canonical links and the sitemap. On Vercel it falls back to the project's production URL. |
+| `APPLE_PASS_P12`, `APPLE_PASS_P12_PASSWORD` | The bar's Pass Type ID certificate from Apple (a .p12, base64) and its password, for "Add to Apple Wallet". **Secrets — never committed.** Without them the feature is simply absent. `scripts/wallet-certificate.sh` installs them. |
 
 ## Deploy
 

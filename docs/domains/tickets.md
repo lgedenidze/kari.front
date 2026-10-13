@@ -122,7 +122,46 @@ as a door ticket is: someone opening the link sees the ticket in the first paint
 
 ## Keeping a ticket
 
-`components/save-to-phone.tsx`, under every live ticket. Two buttons.
+`components/save-to-phone.tsx`, under every live ticket. Two buttons, and on an iPhone a third,
+first: Add to Apple Wallet.
+
+### Add to Apple Wallet
+
+On an iPhone, where the bar has its certificate from Apple, the badge is the first thing
+under the ticket and the only filled one; the other two buttons are outlines there. It is a
+plain link to the ticket as a `.pkpass`: the phone answers that file with its own "Add"
+sheet. Each kind of ticket has its address, beside its picture: `/pass/wallet.pkpass`,
+`/i/{code}/wallet.pkpass`, `/t/{token}/wallet.pkpass`, under the same rules as the page.
+
+- **What the pass is** (`lib/wallet-ticket.ts`): a Wallet event ticket in the app's paper and
+  ink. The night at the top, the name large with the kind of ticket above it, a named
+  night's name, the short code, the hour it is valid until. On its back: the link to the
+  live ticket, and the Wox credit. It turns grey by itself when its night ends
+  (`expirationDate`, from the API's `endsAt`) and Wallet will not share it on
+  (`sharingProhibited`): it has a name on it.
+- **What its code is.** The same as the picture's, below, for the same reason: the
+  ticket's own address with the short code. The door reads it as a lookup, logged
+  "by hand". A pass in Wallet is never updated after it is added; a ticket the bar
+  cancels is caught at the door by that lookup, not by Wallet.
+- **How the file is made** (`lib/pkpass.ts`, no knowledge of tickets, tested with a
+  certificate made on the spot): a zip of `pass.json`, the icon and logo
+  (`assets/wallet/`, drawn from the app's mark by `e2e/wallet-icons.mjs`), a manifest of
+  SHA-1 sums, and a detached PKCS #7 signature of that manifest. The Pass Type ID and the
+  Team ID are read off the certificate, so they cannot disagree with it.
+- **The certificate** is a secret from the bar's Apple Developer account. It reaches the
+  server as `APPLE_PASS_P12` (the .p12, base64) and `APPLE_PASS_P12_PASSWORD`, in the Vercel
+  project's settings. `scripts/wallet-certificate.sh` makes the request file for Apple and
+  installs Apple's answer. **With no certificate there is no badge anywhere and the routes
+  answer 404** (`walletReady()`); `e2e/ticket-image.spec.ts` holds the badge to exactly the
+  cases where the file exists, and to iPhones.
+- **The badge** (`components/apple-wallet-badge.tsx`) is the one thing not drawn in the
+  app's own vocabulary: Apple asks that it look the same everywhere. It is a drawing of
+  Apple's badge. Apple's own file comes only with its Wallet marketing agreement; when the
+  account has accepted it, put Apple's file in that component.
+- **Not checked on a phone.** An iPhone refuses any pass not signed by a certificate from
+  Apple, so until one is installed nobody has seen this pass in Wallet. The file's
+  structure and signature are verified (unit tests, and `openssl smime -verify`); how
+  Wallet lays the fields out has to be looked at on a real iPhone the day it is switched on.
 
 ### Download ticket
 
@@ -157,11 +196,8 @@ Puts the live ticket itself on the home screen, where it opens like an app.
 - An invite link and a door ticket each serve **their own manifest**, so the saved icon opens
   that ticket and not the members' pass page.
 
-Neither button is "Add to Apple/Google Wallet", on purpose. A Wallet pass carries one fixed
-barcode; this ticket's defence against screenshots is that its code changes every thirty
-seconds. Real Wallet passes would also need an Apple Pass Type certificate and a Google Wallet
-issuer account. Google Wallet does support rotating barcodes, so that route is open if the bar
-wants it.
+There is no "Add to Google Wallet". It needs a Google Wallet issuer account; it does support
+rotating barcodes, so that route is open if the bar wants it.
 
 ## Watch out
 

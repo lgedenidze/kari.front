@@ -42,10 +42,7 @@ const WOX_DOT = "#7b5fcb";
 const WIDTH = 1080;
 const HEIGHT = 1920;
 
-/** The address a saved ticket points back to, with its short code for the door to read. */
-export function savedTicketLink(origin: string, path: string, shortCode: string): string {
-  return `${origin}${path}?c=${encodeURIComponent(shortCode)}`;
-}
+export { savedTicketLink } from "./saved-ticket";
 
 function qrPath(value: string): { d: string; size: number } {
   const { modules } = QRCode.create(value, { errorCorrectionLevel: "M" });

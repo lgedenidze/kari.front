@@ -26,7 +26,16 @@ export function PassSkeleton() {
   );
 }
 
-export function PassScreen({ first, week = null }: { first: TonightResponse | null; week?: NightInfo[] | null }) {
+export function PassScreen({
+  first,
+  week = null,
+  wallet = false,
+}: {
+  first: TonightResponse | null;
+  week?: NightInfo[] | null;
+  /** Whether this server can make an Apple Wallet pass (lib/wallet-pass.ts). */
+  wallet?: boolean;
+}) {
   const { t, fill, night } = useI18n();
   const { me, setMe, refresh } = useMe();
   // Asked again every few seconds: this is how the phone learns the door let them in. A failed
@@ -74,7 +83,11 @@ export function PassScreen({ first, week = null }: { first: TonightResponse | nu
       {ticket ? (
         <>
           <LiveTicket ticket={ticket} serverTime={data.serverTime} tonight={tonight.night} />
-          <SaveToPhone image="/pass/ticket.png" fileName={`${venue.name.toLowerCase()}-${ticket.shortCode}`} />
+          <SaveToPhone
+            image="/pass/ticket.png"
+            fileName={`${venue.name.toLowerCase()}-${ticket.shortCode}`}
+            wallet={wallet ? "/pass/wallet.pkpass" : undefined}
+          />
         </>
       ) : me.status === "banned" ? (
         <StatusCard title={t.pass.bannedTitle} body={t.pass.bannedBody} stamp={<Stamp word={t.status.banned} ink="red" size={104} />} />

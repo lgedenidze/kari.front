@@ -1,9 +1,15 @@
-// A ticket saved as a picture carries a QR of its own address, with the pass's short code on
-// the end: /pass?c=1AD0H6, /i/…?c=…, /t/…?c=…  (lib/ticket-image.tsx draws it).
+// A ticket saved as a picture, or put in an iPhone's Wallet, carries a QR of its own address
+// with the pass's short code on the end: /pass?c=1AD0H6, /i/…?c=…, /t/…?c=…
+// (lib/ticket-image.tsx draws the picture; lib/wallet-ticket.ts fills the Wallet pass).
 //
 // It is not a pass code — those change every thirty seconds and cannot be saved. But the door
 // can still read it: the short code is the one printed on the ticket, which staff can already
 // type into Find. Reading it off the picture is the same lookup, without the typing.
+
+/** The address a saved ticket points back to, with its short code for the door to read. */
+export function savedTicketLink(origin: string, path: string, shortCode: string): string {
+  return `${origin}${path}?c=${encodeURIComponent(shortCode)}`;
+}
 
 const TICKET_PATH = /^\/(pass|i\/[^/]+|t\/[^/]+)\/?$/;
 const SHORT_CODE = /^[0-9A-Z]{4,12}$/;

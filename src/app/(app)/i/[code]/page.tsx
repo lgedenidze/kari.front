@@ -1,6 +1,7 @@
 import { TopBar } from "@/components/app-chrome";
 import { firstAnswer } from "@/lib/server-api";
 import type { InviteLinkResponse } from "@/lib/types";
+import { walletReady } from "@/lib/wallet-pass";
 import { InviteScreen } from "./invite-screen";
 
 // Saved to a home screen, this page must reopen as this invite — see lib/web-manifest.ts.
@@ -17,7 +18,7 @@ export default async function Page({ params }: { params: Promise<{ code: string 
     <>
       <TopBar />
       <main className="mx-auto flex w-full max-w-md flex-1 flex-col items-center px-5 pb-10 pt-6">
-        <InviteScreen code={code} first={first} />
+        <InviteScreen code={code} first={first} wallet={walletReady()} />
       </main>
     </>
   );

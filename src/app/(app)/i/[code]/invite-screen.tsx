@@ -15,7 +15,7 @@ import { rememberTicket } from "@/lib/known-here";
 import type { InviteLinkResponse } from "@/lib/types";
 import { venue } from "@/venue";
 
-export function InviteScreen({ code, first }: { code: string; first: InviteLinkResponse | null }) {
+export function InviteScreen({ code, first, wallet = false }: { code: string; first: InviteLinkResponse | null; wallet?: boolean }) {
   const { t, fill, night } = useI18n();
   // Kept current: this is how the guest's phone learns the door let them in.
   const live = useLive<InviteLinkResponse>(`/invites/code/${encodeURIComponent(code)}`, { every: 5000, first });
@@ -74,7 +74,11 @@ export function InviteScreen({ code, first }: { code: string; first: InviteLinkR
     return (
       <div className="flex w-full flex-col items-center gap-5">
         <LiveTicket ticket={data.ticket} serverTime={data.serverTime} tonight={data.tonight} />
-        <SaveToPhone image={`/i/${encodeURIComponent(code)}/ticket.png`} fileName={`${venue.name.toLowerCase()}-${data.ticket.shortCode}`} />
+        <SaveToPhone
+          image={`/i/${encodeURIComponent(code)}/ticket.png`}
+          fileName={`${venue.name.toLowerCase()}-${data.ticket.shortCode}`}
+          wallet={wallet ? `/i/${encodeURIComponent(code)}/wallet.pkpass` : undefined}
+        />
         <p className="text-center text-sm text-ink-soft">{t.ticket.keepPage}</p>
         {failure && (
           <div className="w-full">

@@ -11,7 +11,7 @@ import { rememberTicket } from "@/lib/known-here";
 import type { TicketResponse } from "@/lib/types";
 import { venue } from "@/venue";
 
-export function TicketScreen({ token, first }: { token: string; first: TicketResponse | null }) {
+export function TicketScreen({ token, first, wallet = false }: { token: string; first: TicketResponse | null; wallet?: boolean }) {
   const { t } = useI18n();
   const { data, failure, missing } = useLive<TicketResponse>(`/tickets/${encodeURIComponent(token)}`, { every: 6000, first });
 
@@ -44,7 +44,11 @@ export function TicketScreen({ token, first }: { token: string; first: TicketRes
   return (
     <div className="flex w-full flex-col items-center gap-5">
       <LiveTicket ticket={data.ticket} serverTime={data.serverTime} tonight={data.tonight} />
-      <SaveToPhone image={`/t/${encodeURIComponent(token)}/ticket.png`} fileName={`${venue.name.toLowerCase()}-${data.ticket.shortCode}`} />
+      <SaveToPhone
+        image={`/t/${encodeURIComponent(token)}/ticket.png`}
+        fileName={`${venue.name.toLowerCase()}-${data.ticket.shortCode}`}
+        wallet={wallet ? `/t/${encodeURIComponent(token)}/wallet.pkpass` : undefined}
+      />
       <p className="text-center text-sm text-ink-soft">{t.ticket.keepPage}</p>
     </div>
   );

@@ -15,7 +15,8 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   // The ticket picture (lib/ticket-image.tsx) reads its fonts from disk when it is asked for.
   // They are not imported, so say plainly that they belong to those routes.
-  outputFileTracingIncludes: { "/**/ticket.png": ["./assets/fonts/*.ttf"] },
+  // The Wallet pass (lib/wallet-pass.ts) reads its pictures and Apple's certificate the same way.
+  outputFileTracingIncludes: { "/**/ticket.png": ["./assets/fonts/*.ttf"], "/**/wallet.pkpass": ["./assets/wallet/*"] },
   turbopack: {
     rules: {
       "*.css": {

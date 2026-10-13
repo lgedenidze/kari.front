@@ -101,7 +101,9 @@ the mark keeps still: it never pulses.
 6. **Tap targets are at least 44px.** Inputs are 16px so iOS does not zoom.
 7. **Focus is always visible** — a 2px outline in the text colour.
 8. **Meaning never rests on colour alone.** A verdict band has a word; a chip has a label.
-9. **Icons are drawn here, in the app's vocabulary.** Do not add an icon library.
+9. **Icons are drawn here, in the app's vocabulary.** Do not add an icon library. The one
+   exception is the "Add to Apple Wallet" badge, which is Apple's and is never restyled:
+   black, Apple's proportions, in English, with clear space round it.
 10. **Nothing that wraps a screen may keep a transform.** A transform — even one that moves
     nothing — makes every `position: fixed` sheet inside it sit in the screen instead of the
     window, with the dock on top

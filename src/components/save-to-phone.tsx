@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useI18n } from "@/i18n/provider";
+import { AppleWalletBadge } from "./apple-wallet-badge";
 
-// Two ways to keep a ticket, under every live one.
+// Ways to keep a ticket, under every live one.
 //
 // "Download ticket" hands over the ticket as a picture (lib/ticket-image.tsx): on a phone it
 // goes through the share sheet, where "Save Image" puts it in Photos and the same sheet sends
@@ -12,9 +13,12 @@ import { useI18n } from "@/i18n/provider";
 //
 // "Add to home screen" keeps the live ticket itself one tap away, where it opens like an app.
 //
-// Neither is "Add to Apple/Google Wallet", on purpose. A Wallet pass carries one fixed barcode,
-// and this ticket's whole defence against screenshots is that its code changes every thirty
-// seconds.
+// "Add to Apple Wallet" is offered on an iPhone, where the bar has its certificate from Apple
+// (lib/wallet-pass.ts). It comes first there and is the only filled thing: it is the way an
+// iPhone owner expects to keep a ticket. A Wallet pass carries one fixed code, and a live
+// ticket's defence against screenshots is that its code changes every thirty seconds — so the
+// pass carries what the picture carries, the ticket's own address, and the door treats it the
+// same way: a lookup by the short code, marked "by hand".
 
 /** Chrome's install prompt. It fires once, early, so it is caught for the whole page. */
 type InstallPrompt = Event & { prompt: () => Promise<void> };
@@ -49,6 +53,9 @@ const subscribeToStandalone = (listener: () => void) => {
 const isStandalone = () =>
   window.matchMedia(STANDALONE).matches || (navigator as Navigator & { standalone?: boolean }).standalone === true;
 
+// Which phone this is never changes while the page is open.
+const never = () => () => {};
+
 function isIos(): boolean {
   // iPadOS reports itself as a Mac; a Mac with a touch screen is an iPad.
   return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
@@ -65,13 +72,18 @@ function fetchPicture(image: string): Promise<Blob> {
 export function SaveToPhone({
   image,
   fileName,
+  wallet,
 }: {
   /** Where this ticket's picture is served, e.g. "/pass/ticket.png". */
   image: string;
   /** What the saved file is called, without the extension. */
   fileName: string;
+  /** Where this ticket's Wallet pass is served, e.g. "/pass/wallet.pkpass". Absent where the server cannot make one. */
+  wallet?: string;
 }) {
   const { t } = useI18n();
+  // Known only in the browser, so it is read after the page has arrived, never guessed on the server.
+  const toWallet = useSyncExternalStore(never, isIos, () => false) && wallet;
   const canPrompt = useSyncExternalStore(subscribeToPrompt, () => installPrompt !== null, () => false);
   const standalone = useSyncExternalStore(subscribeToStandalone, isStandalone, () => false);
   const [help, setHelp] = useState<"ios" | "other" | null>(null);
@@ -159,9 +171,15 @@ export function SaveToPhone({
   return (
     <>
       <div className="w-full max-w-[22rem] space-y-2.5 text-center">
+        {/* A plain link: the phone itself answers a pass with its own "Add" sheet. */}
+        {toWallet && (
+          <a href={toWallet} aria-label={t.ticket.wallet} className="mx-auto mb-4 block w-fit rounded-[0.55rem] active:opacity-80">
+            <AppleWalletBadge />
+          </a>
+        )}
         <button
           type="button"
-          className="btn btn-paper w-full"
+          className={`btn w-full ${toWallet ? "btn-line text-paper-light" : "btn-paper"}`}
           onPointerDown={warm}
           onClick={download}
           disabled={making}

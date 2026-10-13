@@ -118,3 +118,47 @@ test("the door finds a guest from the short code a saved ticket carries", async 
   expect(sheet.ok()).toBe(true);
   expect(((await sheet.json()) as { person: { lastName: string } }).person.lastName).toBe(`Saved${run}`);
 });
+
+// "Add to Apple Wallet". It needs the bar's Pass Type ID certificate from Apple, which is a
+// secret and is on no machine by default — so this test holds whichever is true here: with
+// no certificate there is no badge and no file; with one, an iPhone is offered the badge and
+// the file behind it is a pass. Either way the badge is offered exactly when the file exists.
+test("an iPhone is offered Apple Wallet exactly when a pass can be made, and no other phone is", async ({ browser, playwright }) => {
+  const member = await memberWithPass(browser);
+  test.skip(member === null, "the bar is closed tonight in this database: there is no pass to keep");
+  const { page: holder, shortCode } = member!;
+
+  const file = await holder.request.get("/pass/wallet.pkpass");
+  const made = file.status() === 200;
+  expect([200, 404]).toContain(file.status());
+
+  // The same person on an iPhone.
+  const iphone = await browser.newContext({ ...playwright.devices["iPhone 14"], storageState: await holder.context().storageState() });
+  const onIphone = await iphone.newPage();
+  await onIphone.goto("/pass");
+  await expect(onIphone.getByRole("button", { name: "Download ticket" })).toBeVisible();
+  const badge = onIphone.getByRole("link", { name: "Add to Apple Wallet" });
+  await expect(badge).toHaveCount(made ? 1 : 0);
+
+  // An Android phone is never offered it.
+  await holder.goto("/pass");
+  await expect(holder.getByRole("button", { name: "Download ticket" })).toBeVisible();
+  await expect(holder.getByRole("link", { name: "Add to Apple Wallet" })).toHaveCount(0);
+
+  // Nobody else's pass, with or without a certificate.
+  const stranger = await (await browser.newContext()).newPage();
+  expect((await stranger.request.get("/pass/wallet.pkpass", { maxRedirects: 0 })).status()).toBe(404);
+  expect((await stranger.request.get("/t/not-a-real-token/wallet.pkpass")).status()).toBe(404);
+  expect((await stranger.request.get("/i/not-a-real-code/wallet.pkpass")).status()).toBe(404);
+
+  if (!made) return;
+  // The type is what makes Safari offer "Add" instead of saving a file.
+  await expect(badge).toHaveAttribute("href", "/pass/wallet.pkpass");
+  expect(file.headers()["content-type"]).toBe("application/vnd.apple.pkpass");
+  expect(file.headers()["content-disposition"]).toBe(`attachment; filename="kari-${shortCode}.pkpass"`);
+  expect(file.headers()["cache-control"]).toContain("private");
+  const body = await file.body();
+  expect(body.subarray(0, 2).toString("latin1")).toBe("PK");
+  // Its code is the saved ticket's: this ticket's own address with the short code on the end.
+  expect(body.toString("latin1")).toContain(`/pass?c=${shortCode}`);
+});
