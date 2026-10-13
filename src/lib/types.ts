@@ -34,7 +34,6 @@ export interface Me {
   canInvite: boolean;
   inviteQuota: number;
   visits: number;
-  regularAfterVisits: number;
   pendingInvites: number;
   /** Requests to join that nobody has answered. Always 0 unless this is an admin. */
   pendingRequests: number;
@@ -121,8 +120,6 @@ export interface InviteNight {
 export interface InvitesOverview {
   canInvite: boolean;
   quota: number;
-  visits: number;
-  regularAfterVisits: number;
   nights: InviteNight[];
   sent: Invite[];
   received: Invite[];
@@ -270,7 +267,6 @@ export interface Settings {
   cutoffHour: number;
   capacity: number;
   defaultInviteQuota: number;
-  regularAfterVisits: number;
 }
 
 export interface EntriesResponse {

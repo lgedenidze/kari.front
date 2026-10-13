@@ -73,7 +73,6 @@ function SettingsForm({
         cutoffHour: number("cutoffHour"),
         capacity: number("capacity"),
         defaultInviteQuota: number("defaultInviteQuota"),
-        regularAfterVisits: number("regularAfterVisits"),
       });
       onSaved(updated);
     } catch (error) {
@@ -157,19 +156,6 @@ function SettingsForm({
             className="input"
           />
           {fieldError("defaultInviteQuota")}
-        </label>
-        <label className="block">
-          <span className="label">{t.admin.regularAfter}</span>
-          <input
-            name="regularAfterVisits"
-            type="number"
-            min={0}
-            inputMode="numeric"
-            required
-            defaultValue={settings.regularAfterVisits}
-            className="input"
-          />
-          {fieldError("regularAfterVisits")}
         </label>
       </div>
 

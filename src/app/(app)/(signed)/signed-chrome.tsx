@@ -1,7 +1,7 @@
 "use client";
 
-import { usePathname } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Dock } from "@/components/app-chrome";
 import { MeProvider, useMe, usePoll } from "@/components/me";
 import { rememberMember } from "@/lib/known-here";
@@ -34,18 +34,34 @@ export function SignedChrome({ me, children }: { me: Me; children: ReactNode }) 
         <div key={pathname} className={`page-in flex flex-1 flex-col ${leaving ? "leaving" : ""}`}>
           {children}
         </div>
-        <SharedDock shown={heading ?? pathname} onTap={onTap} />
+        <SharedDock shown={heading ?? pathname} at={pathname} onTap={onTap} />
       </div>
     </MeProvider>
   );
 }
 
-function SharedDock({ shown, onTap }: { shown: string; onTap: (href: string) => void }) {
+function SharedDock({ shown, at, onTap }: { shown: string; at: string; onTap: (href: string) => void }) {
   const { me, refresh } = useMe();
-  // An admin's dock counts the requests waiting for an answer. It is the one number here that
-  // changes because of somebody else, on a screen that may stay open all night — so it is
-  // asked for again every half minute, and whenever the app comes back into view.
-  usePoll(refresh, 30_000, me.role === "admin");
+  const router = useRouter();
+  // The account is changed by somebody else — an admin makes this person door staff, switches
+  // their invites off, approves them; a friend sends them an invite; a guest asks to join — on
+  // a screen that may stay open all night. So it is asked for again every half minute, on every
+  // move to another screen, and whenever the app comes back into view. For everyone: it used
+  // to be asked only for an admin, and anyone else kept the dock they had signed in with
+  // (BUG-0007).
+  usePoll(refresh, 30_000, true, at);
+
+  // A new role or standing changes what the pages themselves will show, and whether this one
+  // may be shown at all. They are made again on the server, which sends a person who has just
+  // lost the door or the office back to their pass.
+  const standing = `${me.role} ${me.status}`;
+  const heard = useRef(standing);
+  useEffect(() => {
+    if (heard.current === standing) return;
+    heard.current = standing;
+    router.refresh();
+  }, [standing, router]);
+
   return (
     <Dock
       role={me.role}

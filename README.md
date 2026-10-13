@@ -39,7 +39,7 @@ The Vercel project needs one variable, `API_URL`: the address of the API.
 
 ## Rename the venue
 
-The bar's name was not known when this was built; **NISLI** is a working name. Change it in
+The app carries the name **KARI** (კარი). Change it in
 `src/venue.ts` — the wordmark, the stamps, the metadata and the app manifest all read from there.
 
 ## Find your way

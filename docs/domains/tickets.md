@@ -83,22 +83,29 @@ Inviting is three things, in the order a member thinks of them: **who, which nig
   in view on a 360px phone before anything is typed; a test holds it to that.
 - **The row of nights** (`components/night-picker.tsx`) replaced a two-week calendar and a
   second list of named nights. Only nights the bar is open are on it, the nearest first.
-  Tonight says "Today". A named night carries its name. A night with no invites left is there,
-  struck through, and cannot be chosen. Under the row: the chosen night in full — date, name,
-  note, invites left. The row scrolls sideways and fades at its far edge. The API sends the
-  nights (`InvitesOverview.nights`); the row does not generate dates.
+  Tonight says "Today". Every night is the same small block — the weekday over the day of the
+  month — so the dates line up along the row. A named night is that block as the stub of a
+  ticket, with a dashed tear line and its name on the ticket beside it: the headline cut, two
+  lines at most, then an ellipsis. A night with no invites left is a dashed, empty outline.
+  It can still be tapped: the line under the row then says there is nothing left to send,
+  in red, and the button is off. Under the row: the chosen night in full — date, name, note,
+  invites left. The row scrolls sideways and fades at its far edge. The API sends the nights
+  (`InvitesOverview.nights`); the row does not generate dates.
 - **The personal number and the phone** are folded behind one line, "+ Personal number or
   phone". They unfold by themselves when the API finds a mistake in one.
 - **What comes back is a sheet** over the whole screen: the guest's name, the night, the link
   as a QR to scan off the member's phone, and one large Share button. The invite is not done
   until the guest has it, so that is all there is until the member closes the sheet. Behind
-  it the form is empty again. Sharing sends a line of words with the link — "Invite: NISLI,
+  it the form is empty again. Sharing sends a line of words with the link — "Invite: KARI,
   Fri 16 Oct" — so the guest's chat shows what it is.
 - **Sent** — under the form: each invite with its state, Share, and Cancel (asked for twice).
 - **For you** — above the form, only when there is an invite. Accept goes straight to the
   pass, where the ticket is. Decline is asked for twice: an invite cannot be accepted again.
-- **Not allowed to invite yet** — a card that fills, one mark for each night been, and how
-  many are left. A member the bar has switched inviting off for sees one line instead.
+- **Not allowed to invite** — one line in place of the form. Inviting is a permission every
+  member has until the bar switches it off for them (`me.canInvite`, from the API); someone
+  who is not a member yet is told it is for members. There is nothing to count towards. An
+  admin's switch reaches the open screen within seconds: the invites are asked for again
+  every 8.
 
 ## The invite link
 

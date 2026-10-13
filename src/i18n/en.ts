@@ -164,8 +164,6 @@ export const en = {
     decline: "Decline",
     openTicket: "Open ticket",
     cantCome: "I can't come",
-    lockedTitle: "Inviting unlocks for regulars",
-    lockedBody: "Come {n} nights and you can invite guests. {left} to go.",
     lockedNotMember: "Only verified members can invite guests.",
     newTitle: "Invite a guest",
     night: "Night",
@@ -241,6 +239,20 @@ export const en = {
     member: "Member",
     staff: "Door staff",
     admin: "Admin",
+  },
+
+  // The same three, short enough to sit side by side on a phone.
+  roleShort: {
+    member: "Member",
+    staff: "Door",
+    admin: "Admin",
+  },
+
+  // What each one finds in the dock, by the names the dock uses.
+  roleOpens: {
+    member: "Sees: Pass, Invites.",
+    staff: "Sees: Pass, Invites, Door.",
+    admin: "Sees: Pass, Invites, Door, Office.",
   },
 
   door: {
@@ -351,14 +363,10 @@ export const en = {
     colNights: "Nights",
     statusLabel: "Status",
     roleLabel: "Role",
-    invitesLabel: "Inviting",
-    inviteAuto: "Automatic — after {n} nights",
-    inviteOn: "Always allowed",
-    inviteOff: "Never",
-    canInviteNow: "Can invite now",
-    cannotInviteNow: "Cannot invite yet",
+    invitesLabel: "Can invite guests",
     quota: "Guests per night",
-    quotaDefault: "Recommended ({n})",
+    fewer: "Fewer",
+    more: "More",
     doorNotes: "Notes for the door",
     doorNotesHint: "The door sees this on a scan.",
     resetPassword: "Reset password",
@@ -366,6 +374,7 @@ export const en = {
     history: "Door history",
     historyEmpty: "No door activity yet.",
     suspend: "Suspend",
+    suspendConfirm: "Suspend? Their passes and invites are cancelled.",
     liftSuspension: "Lift suspension",
     joined: "Joined {date}",
     lastVisit: "Last visit {date}",
@@ -402,7 +411,6 @@ export const en = {
     cutoffHint: "Passes for a night work until this hour the next morning.",
     capacity: "Capacity",
     defaultQuota: "Guests a member can invite per night",
-    regularAfter: "Nights before a member can invite",
     weekdays: "Sun,Mon,Tue,Wed,Thu,Fri,Sat",
   },
 
@@ -447,7 +455,7 @@ export const en = {
     banned: "Your access is suspended.",
     not_approved: "Your request has not been approved yet.",
     closed: "The bar is closed tonight.",
-    cannot_invite: "You cannot invite guests yet.",
+    cannot_invite: "Inviting is switched off for your account. Ask at the bar.",
     quota_reached: "You have used all your invites for that night.",
     night_closed: "The bar is closed that night.",
     night_out_of_range: "Pick a night in the next two weeks.",
@@ -469,7 +477,6 @@ export const en = {
     capacity_invalid: "Enter a number of people.",
     quota_invalid: "Enter a number between 0 and 50.",
     cutoff_invalid: "Choose an hour between 0 and 12.",
-    visits_invalid: "Enter a number of nights.",
     open_days_invalid: "Choose the days the bar opens.",
     title_long: "That name is too long.",
     note_long: "That note is too long.",

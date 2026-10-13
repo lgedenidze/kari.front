@@ -36,9 +36,11 @@ offered. `e2e/flow.spec.ts` covers all three.
 - **Public pages:** the URL decides. `/` is Georgian, `/en` is English. Each links to the other
   with `hreflang`. Visiting one saves its language in the `kari_lang` cookie (`RememberLang`),
   so the app opens in the same language.
-- **App pages:** `i18n/server.ts#getLang` — the cookie, else the browser's `Accept-Language`,
-  else Georgian. The toggle (`LangToggle`) sets the cookie and refreshes. In a top bar it is
-  a two-letter code, as on the landing page; in the profile it is spelled out.
+- **App pages:** `i18n/server.ts#getLang` — the cookie, else Georgian. The phone's own
+  language is not asked: most phones in Tbilisi are set to English, and an invite link — the
+  first page a guest opens, before any choice is saved — then opened in English. The toggle
+  (`LangToggle`) sets the cookie and refreshes. In a top bar it is a two-letter code, as on
+  the landing page; in the profile it is spelled out.
 - Strings: `i18n/en.ts` and `i18n/ka.ts`, typed so they must have the same shape.
   `format.test.ts` also checks placeholders match.
 - Client components read strings with `useI18n()`; server components with `getDict(lang)`.

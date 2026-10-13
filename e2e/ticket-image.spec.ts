@@ -53,7 +53,7 @@ async function memberWithPass(browser: Browser): Promise<{ page: Page; shortCode
 async function expectTicketPicture(response: APIResponse, shortCode: string) {
   expect(response.status()).toBe(200);
   expect(response.headers()["content-type"]).toBe("image/png");
-  expect(response.headers()["content-disposition"]).toBe(`attachment; filename="nisli-${shortCode}.png"`);
+  expect(response.headers()["content-disposition"]).toBe(`attachment; filename="kari-${shortCode}.png"`);
   // One person's ticket must never sit in a shared cache.
   expect(response.headers()["cache-control"]).toContain("private");
 
@@ -77,7 +77,7 @@ test("a member downloads tonight's pass as a picture", async ({ browser }) => {
   const button = page.getByRole("button", { name: "Download ticket" });
   await expect(button).toBeVisible();
   const [download] = await Promise.all([page.waitForEvent("download"), button.click()]);
-  expect(download.suggestedFilename()).toBe(`nisli-${shortCode}.png`);
+  expect(download.suggestedFilename()).toBe(`kari-${shortCode}.png`);
 });
 
 test("the picture of a pass is only for whoever holds it", async ({ browser }) => {

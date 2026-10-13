@@ -1,10 +1,11 @@
 /**
- * The bar's identity. The real name was not known when this was built — NISLI (ნისლი, "fog")
- * is a working name. Rename the venue here and nowhere else.
+ * The bar's identity. Its name is the app's name: KARI (კარი, "door"), on the owner's word
+ * (2026-10-13). It was NISLI while the name was not known. Rename the venue here and nowhere
+ * else.
  */
 export const venue = {
-  name: "NISLI",
-  nameKa: "ნისლი",
+  name: "KARI",
+  nameKa: "კარი",
   /** Shown beside the name in metadata and the stamp ring. */
   kind: { ka: "ბარი", en: "Bar" },
   city: { ka: "თბილისი", en: "Tbilisi" },

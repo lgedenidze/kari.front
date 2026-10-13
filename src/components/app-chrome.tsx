@@ -7,7 +7,7 @@ import { PrefetchKind } from "next/dist/client/components/router-reducer/router-
 import { useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
 import { useI18n } from "@/i18n/provider";
-import { LANG_COOKIE, type Lang } from "@/venue";
+import { LANG_COOKIE, venue, type Lang } from "@/venue";
 import { VenueMark } from "./brand";
 import { Count } from "./count";
 import { InviteIcon, OfficeIcon, PassIcon, ProfileIcon, ScanIcon } from "./icons";
@@ -55,7 +55,7 @@ export function LangToggle({ className = "", short = false }: { className?: stri
 export function TopBar({ right }: { right?: ReactNode }) {
   return (
     <header className="flex items-center justify-between gap-3 px-5 pt-[max(1.1rem,env(safe-area-inset-top))]">
-      <Link href="/" aria-label="NISLI">
+      <Link href="/" aria-label={venue.name}>
         <VenueMark className="text-[0.95rem]" />
       </Link>
       <div className="flex items-center gap-2">{right ?? <LangToggle short />}</div>

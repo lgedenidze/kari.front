@@ -11,8 +11,17 @@ import type { InviteNight } from "@/lib/types";
  * It was a two-week calendar with a second list of named nights under it. That was most of a
  * screen to answer a question whose answer is nearly always "tonight" or "this Friday", and it
  * stood between the member and the one thing they came to type — the guest's name. A row
- * holds the same nights in one line: a closed night is simply not on it, a named night
- * carries its name, and a night with no invites left is there but cannot be chosen.
+ * holds the same nights in one line, and a closed night is simply not on it.
+ *
+ * Every night is the same small block: the weekday over the day of the month, in the same
+ * place on each, so the row reads as a run of dates. A night the bar has named is that block
+ * as the stub of a ticket, torn along a dashed line, with its name on the ticket beside it —
+ * in the headline cut, on up to two lines, with room. (The name used to be a third, smaller
+ * line squeezed under the number: it was cut short, and it pushed that night's date out of
+ * line with its neighbours.)
+ *
+ * A night with no invites left stays in the row, drawn as an empty outline. It can still be
+ * tapped, because the line under the row is where it says why there is nothing to send.
  *
  * The API supplies the nights; nothing here works out what "tonight" is.
  */
@@ -62,23 +71,35 @@ export function NightPicker({
             <button
               key={n.night}
               type="button"
-              disabled={gone}
               aria-pressed={chosen}
               aria-label={[formatNight(n.night, "long"), n.title, left(n.remaining)].filter(Boolean).join(", ")}
               onClick={() => onChange(n.night)}
-              className={`flex min-w-[3.6rem] flex-none flex-col items-center justify-center rounded-2xl border-2 px-2.5 pb-2 pt-1.5 transition-colors ${
+              className={`flex h-[4.25rem] flex-none items-stretch overflow-hidden rounded-2xl border-2 transition-colors ${
                 chosen
-                  ? "border-ink bg-ink text-paper-light"
+                  ? gone
+                    ? "border-dashed border-ink bg-paper-light text-ink-deep"
+                    : "border-ink bg-ink text-paper-light"
                   : gone
-                    ? "border-paper-line text-paper-soft"
+                    ? "border-dashed border-paper-line text-paper-soft"
                     : "border-ink bg-qr text-ink-deep active:bg-paper-light"
               }`}
             >
-              <span className={`text-[0.72rem] font-bold ${chosen ? "text-ink-soft" : "text-paper-soft"}`}>
-                {n.night === tonight ? t.invites.today : names[weekdayOf(n.night)]}
+              <span className="flex w-[3.5rem] flex-none flex-col items-center justify-center">
+                <span className={`text-[0.72rem] font-bold leading-[1.5] ${chosen && !gone ? "text-ink-soft" : "text-paper-soft"}`}>
+                  {n.night === tonight ? t.invites.today : names[weekdayOf(n.night)]}
+                </span>
+                <span className="display tabular text-[1.75rem] leading-none">{Number(n.night.slice(8))}</span>
               </span>
-              <span className={`display tabular text-[1.75rem] ${gone ? "line-through decoration-2" : ""}`}>{Number(n.night.slice(8))}</span>
-              {n.title && <span className="mt-1 max-w-[5.75rem] truncate text-[0.72rem] font-bold leading-tight">{n.title}</span>}
+              {n.title && (
+                <span
+                  className={`flex max-w-[8.5rem] items-center border-l-2 border-dashed py-1.5 pl-3 pr-3.5 text-left ${
+                    chosen && !gone ? "border-ink-line" : "border-paper-line"
+                  }`}
+                >
+                  {/* Two lines at most, and a line tall enough for Georgian tails (ვ, ფ, პ). */}
+                  <span className="display line-clamp-2 break-words text-[1.05rem] leading-[1.3]">{n.title}</span>
+                </span>
+              )}
             </button>
           );
         })}
@@ -93,7 +114,7 @@ export function NightPicker({
             {formatNight(selected.night, "long")}
             {selected.title && `, ${selected.title}`}
           </p>
-          <p className="text-paper-soft">
+          <p className={selected.remaining === 0 ? "font-semibold text-stamp-red" : "text-paper-soft"}>
             {/* A note may or may not end in a full stop; one is put after it either way. */}
             {selected.note && `${selected.note.replace(/[.\s]+$/, "")}. `}
             {left(selected.remaining)}

@@ -98,7 +98,7 @@ then remembered: going back to a tab already shown never waits.
 |---|---|---|
 | Tonight | `overview.tsx` | Requests waiting; inside, passes, turned away, members; the last 14 nights as a table. A night in the table opens the door's list for that night. |
 | Requests | `requests.tsx` | The review queue, oldest first. Open the guest's profile — the button names the network (`lib/profile-link.ts`) — then approve with one tap or reject with two: the first opens the note to the guest and a way back. |
-| People | `people.tsx` | Rows to tap on a phone, a table on a desk. Search, and filters in one row that scrolls. A person's page: status, role, inviting, quota, notes for the door, password reset, door history. |
+| People | `people.tsx` | Rows to tap on a phone, a table on a desk. Search, and filters in one row that scrolls. A row opens the person: see "A person". |
 | Nights | `nights.tsx` | "Add a night" for any date; named and changed nights by name; the next three weeks, each night a row to tap. |
 | Door log | `log.tsx` | Every decision on one night: records on a phone, a table on a desk. Arrows step a night back and on; the date field takes any other night. In Georgian the tab is "კარის სია" (the door's list). |
 | Settings | `settings.tsx` | Opening days, door hours, the cutoff, capacity, invite defaults. |
@@ -110,10 +110,34 @@ Requests tab. Both read one value, `me.pendingRequests` (`useRequestsWaiting` in
 `components/me.tsx`). The API sends it with the account and sends 0 to everyone who is not an
 admin, so it is on screen with the page and is never a second thing to wait for.
 
-It is kept current three ways. The dock re-reads the account every 30 seconds and whenever the
-app comes back into view (`signed-chrome.tsx`). Approving or rejecting takes one off at once.
+It is kept current three ways. The dock re-reads the account every 30 seconds, on every move
+to another screen, and whenever the app comes back into view (`signed-chrome.tsx`) — for
+everyone, see "A person". Approving or rejecting takes one off at once.
 And when the review queue itself reports a different total, the account is read again
 (`requests.tsx`). `e2e/flow.spec.ts` holds the two places to the same number.
+
+### A person
+
+`PersonDetail` in `people.tsx`. What the bar decides about someone is one card of controls,
+and **each is saved by the tap that changes it** — there is no Save button for them. "Saved"
+appears at the top of the page, in the same place every time.
+
+- **Role** — three buttons side by side: Member, Door, Admin. The line under them names what
+  that role finds in the dock, in the dock's own words.
+- **Can invite guests** — a switch, on for every member unless it was switched off here.
+  While it is on, the number of guests per night is beside it, with a minus and a plus. Only
+  an approved member has this row.
+- **Status** — a list. Suspending is asked for twice, in place: it voids the person's passes
+  and invites and cannot be taken back.
+- **Notes for the door** are typed, so they alone have a Save button, which appears when the
+  text has changed.
+
+**The person's own phone follows.** Every signed-in app asks for its account again every 30
+seconds, on every move to another screen and on coming back into view. A new role redraws
+the dock. A new role or status also has the open page made again on the server, which sends
+someone who has just lost the door or the office to their pass. Until 2026-10-13 only an
+admin's app asked again, and anyone else kept the dock they had signed in with
+([BUG-0007](../bugs/0007-a-new-role-does-not-reach-an-open-app.md)).
 
 ### Nights
 

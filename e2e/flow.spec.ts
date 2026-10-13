@@ -419,3 +419,84 @@ test("an admin sees how many requests are waiting, on the dock and on the reques
   const staff = await signIn(browser, seed.StaffPhone, seed.StaffPassword);
   expect(((await (await staff.request.get("/api/me")).json()) as { pendingRequests: number }).pendingRequests).toBe(0);
 });
+
+test("what the bar changes about a person reaches the app they already have open", async ({ browser }) => {
+  const last = `Changed${run}`;
+
+  // A member, approved a moment ago, with their app open on the pass.
+  const person = await (await english(browser)).newPage();
+  const me = await (
+    await person.request.post("/api/auth/register", {
+      data: {
+        firstName: "Saba", lastName: last, phone: newPhone(), password: PASSWORD,
+        profileUrl: `saba.changed.${run}`, lang: "en", adult: true, consent: true,
+      },
+    })
+  ).json();
+  const admin = await signIn(browser, seed.AdminPhone, seed.AdminPassword);
+  expect((await admin.request.post(`/api/admin/users/${me.id}/review`, { data: { decision: "approve" } })).ok()).toBe(true);
+  await person.goto("/pass");
+  const dock = person.getByRole("navigation", { name: "Home" });
+  await expect(dock.getByRole("link", { name: "Pass" })).toBeVisible();
+  await expect(dock.getByRole("link", { name: "Door" })).toHaveCount(0);
+
+  // Picking the phone up again is all the person ever does here: the app comes back into view.
+  const lookAgain = () => person.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
+
+  // The admin opens the person in the back office. Each control is saved by the tap itself.
+  await admin.goto("/admin#people");
+  await admin.getByRole("searchbox").fill(last);
+  await admin.getByRole("button", { name: new RegExp(`Saba ${last}`) }).first().click();
+  const saved = admin.getByRole("status").filter({ hasText: "Saved" });
+
+  // Door staff: the scanner appears in the dock of the app that was open all along. It used
+  // to stay as it was until the person signed in again (BUG-0007).
+  await admin.getByRole("radio", { name: "Door" }).click();
+  await expect(saved).toBeVisible();
+  await lookAgain();
+  await expect(dock.getByRole("link", { name: "Door" })).toBeVisible();
+  await expect(dock.getByRole("link", { name: "Office" })).toHaveCount(0);
+
+  // Then an admin: the back office appears too.
+  await admin.getByRole("radio", { name: "Admin" }).click();
+  await expect(admin.getByRole("radio", { name: "Admin" })).toBeChecked();
+  await lookAgain();
+  await expect(dock.getByRole("link", { name: "Office" })).toBeVisible();
+
+  // Inviting is a permission, and a member has it from the day they are approved: nobody
+  // switched it on for this one, and nothing had to be earned first.
+  await dock.getByRole("link", { name: "Invites" }).click();
+  await expect(person.getByRole("button", { name: "Create invite" })).toBeVisible();
+  const invites = admin.getByRole("switch", { name: "Can invite guests" });
+  await expect(invites).toBeChecked();
+
+  // The bar takes it away from this one person, with one tap. Their invite form goes.
+  await invites.click();
+  await expect(invites).not.toBeChecked();
+  await expect(person.getByText("Inviting is switched off for your account.")).toBeVisible({ timeout: 15_000 });
+  await expect(person.getByRole("button", { name: "Create invite" })).toHaveCount(0);
+
+  // Back to a plain member while they stand at the door's scanner: that screen is no longer
+  // theirs, so they are taken to their pass, and the dock has only a member's tabs again.
+  await dock.getByRole("link", { name: "Door" }).click();
+  await person.waitForURL("**/door");
+  await admin.getByRole("radio", { name: "Member" }).click();
+  await expect(admin.getByRole("radio", { name: "Member" })).toBeChecked();
+  await lookAgain();
+  await person.waitForURL("**/pass");
+  await expect(dock.getByRole("link", { name: "Door" })).toHaveCount(0);
+  await expect(dock.getByRole("link", { name: "Office" })).toHaveCount(0);
+});
+
+test("a link opens in Georgian on a phone that has not chosen a language", async ({ browser }) => {
+  // A phone set to English, as most are: its language is not what decides.
+  const page = await (await browser.newContext({ locale: "en-US" })).newPage();
+  await page.goto("/login");
+  await expect(page.getByRole("heading", { name: "შესვლა" })).toBeVisible();
+
+  // English is one tap away, and it stays chosen.
+  await page.getByRole("button", { name: "English" }).click();
+  await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
+  await page.goto("/join");
+  await expect(page.getByRole("heading", { name: "Request access" })).toBeVisible();
+});

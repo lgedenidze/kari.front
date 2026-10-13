@@ -32,7 +32,7 @@ export function InvitesSkeleton() {
  * done until the guest has it, so that is the only thing on screen until the member says so.
  */
 export function InvitesScreen({ first }: { first: InvitesOverview | null }) {
-  const { t } = useI18n();
+  const { t, error } = useI18n();
   const { me, refresh } = useMe();
   const router = useRouter();
   const live = useLive<InvitesOverview>("/invites", { every: 8000, first });
@@ -88,7 +88,11 @@ export function InvitesScreen({ first }: { first: InvitesOverview | null }) {
       )}
 
       {!data.canInvite ? (
-        <Locked member={me.status === "approved"} needed={data.regularAfterVisits} visits={data.visits} />
+        // Inviting is a permission, and this account does not have it: not a member yet, or a
+        // member the bar switched it off for. One line. There is nothing here to work towards.
+        <p className="rounded-2xl border-2 border-ink-line p-5 text-ink-soft">
+          {me.status === "approved" ? error("cannot_invite") : t.invites.lockedNotMember}
+        </p>
       ) : (
         <NewInvite
           overview={data}
@@ -130,50 +134,6 @@ function stateLabel(t: ReturnType<typeof useI18n>["t"], invite: Invite): string 
 
 function nightLine(invite: Invite, night: (n: string, s?: "short" | "long") => string, style: "short" | "long" = "long"): string {
   return invite.nightTitle ? `${night(invite.night, style)}, ${invite.nightTitle}` : night(invite.night, style);
-}
-
-/**
- * Not allowed to invite yet. For a member that is a matter of nights, so it is drawn as what
- * it is — a card that fills up, one mark a night — instead of a sentence about a rule.
- */
-function Locked({ member, needed, visits }: { member: boolean; needed: number; visits: number }) {
-  const { t, fill, error } = useI18n();
-  const left = needed - visits;
-
-  // Not a member; or a member whom the bar has switched inviting off for. No card to fill.
-  if (!member || left <= 0) {
-    return (
-      <p className="rounded-2xl border-2 border-ink-line p-5 text-ink-soft">{member ? error("cannot_invite") : t.invites.lockedNotMember}</p>
-    );
-  }
-
-  return (
-    <section className="paper p-5">
-      <h2 className="display text-3xl">{t.invites.lockedTitle}</h2>
-      {/* Drawn one by one only while that is readable; a longer wait is said in the line below. */}
-      {needed <= 10 && (
-        <ol className="mt-4 flex flex-wrap gap-2.5" aria-hidden="true">
-          {Array.from({ length: needed }, (_, index) => (
-            <li
-              key={index}
-              className={`grid h-11 w-11 place-items-center rounded-full border-2 ${
-                index < visits ? "border-stamp-blue bg-stamp-blue text-qr" : "border-dashed border-paper-line text-paper-soft"
-              }`}
-            >
-              {index < visits ? (
-                <svg viewBox="0 0 12 12" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="m2.5 6.4 2.3 2.3 4.7-5" />
-                </svg>
-              ) : (
-                <span className="tabular text-sm font-bold">{index + 1}</span>
-              )}
-            </li>
-          ))}
-        </ol>
-      )}
-      <p className="mt-4 text-paper-soft">{fill(t.invites.lockedBody, { n: needed, left })}</p>
-    </section>
-  );
 }
 
 function ReceivedInvite({
@@ -380,9 +340,11 @@ function CreatedSheet({ invite, onClose }: { invite: Invite; onClose: () => void
 
 function NewInvite({ overview, onCreated }: { overview: InvitesOverview; onCreated: (invite: Invite) => void }) {
   const { t } = useI18n();
-  // Start on the first night that can actually be invited to.
-  const firstFree = overview.nights.find((n) => n.open && n.remaining > 0)?.night ?? "";
+  // Start on the first night that can actually be invited to. With every night used up, on
+  // the first open one: the line under the row then says there is nothing left to send.
+  const firstFree = (overview.nights.find((n) => n.open && n.remaining > 0) ?? overview.nights.find((n) => n.open))?.night ?? "";
   const [selected, setSelected] = useState(firstFree);
+  const usedUp = overview.nights.find((n) => n.night === selected)?.remaining === 0;
   const [busy, setBusy] = useState(false);
   const [fields, setFields] = useState<Record<string, string>>({});
   const [failure, setFailure] = useState<string | null>(null);
@@ -475,7 +437,7 @@ function NewInvite({ overview, onCreated }: { overview: InvitesOverview; onCreat
         </button>
       )}
 
-      <button type="submit" className="btn btn-ink btn-big w-full" disabled={busy || !selected}>
+      <button type="submit" className="btn btn-ink btn-big w-full" disabled={busy || !selected || usedUp}>
         {busy ? t.invites.creating : t.invites.create}
       </button>
     </form>
