@@ -8,6 +8,7 @@ import { useMe } from "@/components/me";
 import { PhotoPicker } from "@/components/photo-picker";
 import { useI18n } from "@/i18n/provider";
 import { api, isApiError } from "@/lib/api";
+import { forgetAll } from "@/lib/live-store";
 import type { Me } from "@/lib/types";
 
 export function ProfileScreen() {
@@ -17,6 +18,8 @@ export function ProfileScreen() {
 
   async function signOut() {
     await api.post("/auth/logout").catch(() => {});
+    // Nothing this account saw may be shown to whoever signs in next on this phone.
+    forgetAll();
     router.push("/");
     router.refresh();
   }

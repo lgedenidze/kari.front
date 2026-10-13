@@ -116,7 +116,8 @@ export function LiveTicket({
     window_ = token ? (
       <Qr value={token} label={t.ticket.showAtDoor} className="block w-full" />
     ) : (
-      <div className="aspect-square w-full animate-pulse rounded-lg bg-paper" aria-label={t.common.loading} />
+      // The same quiet block as every other placeholder: the code is a moment away.
+      <span className="skeleton block aspect-square w-full" aria-label={t.common.loading} />
     );
     caption = admitted ? (
       <>

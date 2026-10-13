@@ -1,17 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { VenueMark, WoxCredit } from "@/components/brand";
 import { Field, FormError } from "@/components/field";
 import { FindIcon, LogIcon, ScanIcon } from "@/components/icons";
-import { useMe, usePoll } from "@/components/me";
+import { useMe } from "@/components/me";
 import { Qr } from "@/components/qr";
 import { Stamp } from "@/components/stamp";
+import { useLive } from "@/components/use-live";
 import { useI18n } from "@/i18n/provider";
 import { api, isApiError } from "@/lib/api";
 import type { DecideResponse, Decision, DoorTonight, Entry, ScanResult, SearchHit, Verdict, WalkInResponse } from "@/lib/types";
-import { Scanner } from "./scanner";
+import { Scanner, ScannerStarting } from "./scanner";
 
 type Tab = "scan" | "find" | "log";
 type Tone = "go" | "wait" | "stop";
@@ -35,11 +36,95 @@ const BAND: Record<Tone, string> = {
   stop: "bg-stop text-ink-deep",
 };
 
-export function DoorScreen() {
+/**
+ * The frame of the door: who is on it, the three counters, the three tabs. It needs nothing
+ * from the server to be drawn — a counter with no number yet shows a dash — so it is on screen
+ * from the tap, and is the same frame whether the page has arrived or not.
+ */
+function DoorFrame({
+  tonight,
+  tab,
+  onTab,
+  children,
+}: {
+  tonight: DoorTonight | null;
+  tab: Tab;
+  onTab?: (tab: Tab) => void;
+  children: ReactNode;
+}) {
   const { t, fill } = useI18n();
   const { me } = useMe();
+  const capacity = tonight?.night.capacity;
+
+  return (
+    <div className="ground-deep flex flex-1 flex-col bg-ink-deep">
+      <header className="flex items-center justify-between gap-3 px-4 pt-[max(1rem,env(safe-area-inset-top))]">
+        <Link href="/pass" aria-label={t.pass.title}>
+          <VenueMark className="text-[0.9rem]" />
+        </Link>
+        <p className="truncate text-sm text-ink-soft">
+          {me.firstName} {me.lastName}
+        </p>
+      </header>
+
+      <dl className="grid grid-cols-3 gap-2 px-4 pt-4 text-center">
+        <Counter label={t.door.inside} value={tonight?.inside} note={capacity ? fill(t.door.ofCapacity, { n: capacity }) : undefined} />
+        <Counter label={t.door.passesTonight} value={tonight?.passes} />
+        <Counter label={t.door.turnedAway} value={tonight?.denied} />
+      </dl>
+
+      <nav className="mt-4 grid grid-cols-3 gap-1 px-4" aria-label={t.door.title}>
+        {(
+          [
+            ["scan", t.door.tabScan, ScanIcon],
+            ["find", t.door.tabFind, FindIcon],
+            ["log", t.door.tabLog, LogIcon],
+          ] as const
+        ).map(([key, label, TabIcon]) => (
+          <button
+            key={key}
+            type="button"
+            aria-pressed={tab === key}
+            onClick={() => onTab?.(key)}
+            className={`flex min-h-12 items-center justify-center gap-2 rounded-full text-[0.95rem] font-bold transition-colors ${
+              tab === key ? "bg-paper text-ink-deep" : "text-ink-soft hover:text-paper-light"
+            }`}
+          >
+            <TabIcon width={20} height={20} />
+            {label}
+          </button>
+        ))}
+      </nav>
+
+      <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 px-4 py-4">{children}</main>
+
+      <footer className="flex justify-center pb-2">
+        <WoxCredit label={t.common.poweredBy} className="text-ink-soft" />
+      </footer>
+    </div>
+  );
+}
+
+/** The door while its page is on the way: the frame, and the scanner window waiting. */
+export function DoorSkeleton() {
+  const { t } = useI18n();
+  return (
+    <DoorFrame tonight={null} tab="scan">
+      <ScannerStarting />
+      <p className="py-3 text-center font-semibold text-paper-light">{t.door.pointCamera}</p>
+      <button type="button" className="btn btn-line mt-auto w-full text-paper-light">
+        {t.door.walkIn}
+      </button>
+    </DoorFrame>
+  );
+}
+
+export function DoorScreen({ first }: { first: DoorTonight | null }) {
+  const { t } = useI18n();
   const [tab, setTab] = useState<Tab>("scan");
-  const [tonight, setTonight] = useState<DoorTonight | null>(null);
+  // The counters are a convenience: the scanner must keep working without them, so a poll
+  // that fails says nothing.
+  const { data: tonight, set: setTonight } = useLive<DoorTonight>("/door/tonight", { every: 6000, first });
   const [result, setResult] = useState<ScanResult | null>(null);
   const [walkIn, setWalkIn] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
@@ -49,15 +134,9 @@ export function DoorScreen() {
   // A QR that is not one of ours gets a brief notice, not a full-screen result: there is
   // nobody to decide about, so nothing should have to be dismissed.
   const [notPass, setNotPass] = useState(false);
+  // False once the camera is blocked or missing: "point the camera" is then the wrong advice.
+  const [camera, setCamera] = useState(true);
   const busy = useRef(false);
-
-  usePoll(async () => {
-    try {
-      setTonight(await api.get<DoorTonight>("/door/tonight"));
-    } catch {
-      // The counters are a convenience; the scanner must keep working without them.
-    }
-  }, 6000);
 
   const onToken = useCallback(async (token: string) => {
     if (busy.current) return;
@@ -101,49 +180,9 @@ export function DoorScreen() {
     setTimeout(() => setFlash(null), 1100);
   }
 
-  const capacity = tonight?.night.capacity;
-
   return (
-    <div className="ground-deep flex flex-1 flex-col bg-ink-deep">
-      <header className="flex items-center justify-between gap-3 px-4 pt-[max(1rem,env(safe-area-inset-top))]">
-        <Link href="/pass" aria-label={t.pass.title}>
-          <VenueMark className="text-[0.9rem]" />
-        </Link>
-        <p className="truncate text-sm text-ink-soft">
-          {me.firstName} {me.lastName}
-        </p>
-      </header>
-
-      <dl className="grid grid-cols-3 gap-2 px-4 pt-4 text-center">
-        <Counter label={t.door.inside} value={tonight?.inside} note={capacity ? fill(t.door.ofCapacity, { n: capacity }) : undefined} />
-        <Counter label={t.door.passesTonight} value={tonight?.passes} />
-        <Counter label={t.door.turnedAway} value={tonight?.denied} />
-      </dl>
-
-      <nav className="mt-4 grid grid-cols-3 gap-1 px-4" aria-label={t.door.title}>
-        {(
-          [
-            ["scan", t.door.tabScan, ScanIcon],
-            ["find", t.door.tabFind, FindIcon],
-            ["log", t.door.tabLog, LogIcon],
-          ] as const
-        ).map(([key, label, TabIcon]) => (
-          <button
-            key={key}
-            type="button"
-            aria-pressed={tab === key}
-            onClick={() => setTab(key)}
-            className={`flex min-h-12 items-center justify-center gap-2 rounded-full text-[0.95rem] font-bold transition-colors ${
-              tab === key ? "bg-paper text-ink-deep" : "text-ink-soft hover:text-paper-light"
-            }`}
-          >
-            <TabIcon width={20} height={20} />
-            {label}
-          </button>
-        ))}
-      </nav>
-
-      <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 px-4 py-4">
+    <>
+      <DoorFrame tonight={tonight} tab={tab} onTab={setTab}>
         {failure && <FormError code={failure} />}
 
         {tab === "scan" && (
@@ -151,13 +190,19 @@ export function DoorScreen() {
             {/* The camera stays on but reads nothing while a result is up, so it is ready again
                 at once. When it wakes, the pass just decided must leave the frame before it
                 can be read again — see lib/scan-presence.ts. */}
-            <Scanner active={!result && !walkIn && !flash && !checking} checking={checking} onToken={onToken} />
+            <Scanner
+              active={!result && !walkIn && !flash && !checking}
+              checking={checking}
+              onToken={onToken}
+              onCamera={setCamera}
+              onFind={() => setTab("find")}
+            />
             {notPass ? (
               <p role="status" className="rounded-2xl bg-stop px-4 py-3 text-center font-bold text-ink-deep">
                 {t.verdict.unknown}. <span className="font-semibold">{t.verdict.unknownHint}</span>
               </p>
             ) : (
-              <p className="py-3 text-center font-semibold text-paper-light">{t.door.pointCamera}</p>
+              camera && <p className="py-3 text-center font-semibold text-paper-light">{t.door.pointCamera}</p>
             )}
             <button type="button" className="btn btn-line mt-auto w-full text-paper-light" onClick={() => setWalkIn(true)}>
               {t.door.walkIn}
@@ -168,11 +213,7 @@ export function DoorScreen() {
         {tab === "find" && <Finder onOpen={open} onWalkIn={() => setWalkIn(true)} />}
 
         {tab === "log" && <Log entries={tonight?.recent ?? []} />}
-      </main>
-
-      <footer className="flex justify-center pb-2">
-        <WoxCredit label={t.common.poweredBy} className="text-ink-soft" />
-      </footer>
+      </DoorFrame>
 
       {result && <ResultSheet result={result} onClose={() => setResult(null)} onDecided={decided} />}
       {walkIn && (
@@ -194,7 +235,7 @@ export function DoorScreen() {
           />
         </div>
       )}
-    </div>
+    </>
   );
 }
 

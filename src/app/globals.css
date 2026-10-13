@@ -444,7 +444,14 @@
   /* A screen eases in when it is navigated to. Short, and only a few pixels: enough to read
      as "this is new", not enough to make anyone wait. */
   .page-in {
-    animation: page-in 240ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
+    animation: page-in 240ms cubic-bezier(0.2, 0.8, 0.3, 1) backwards;
+  }
+
+  /* The screen being left, when the next one is not in hand yet: it steps back, so the tap is
+     visibly answered. Held off for a moment — a screen that is ready arrives before this
+     starts, and then nothing is seen of it at all. */
+  .page-in.leaving {
+    animation: leaving 200ms ease-out 140ms forwards;
   }
 
   /* A placeholder in the shape of what is coming, with a light sweeping across it. It takes
@@ -463,12 +470,6 @@
     transform: translateX(-100%);
     background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.32), transparent);
     animation: sweep 1.25s ease-in-out infinite;
-  }
-
-  /* A stamp being inked: the ring draws itself round. */
-  .stamp-loader-ring {
-    transform-origin: 50% 50%;
-    animation: spin 0.95s linear infinite;
   }
 
   /* ---------- small pieces ---------- */
@@ -528,26 +529,25 @@
   }
 }
 
+/* Only where it starts. It ends as the screen itself is, with no transform left behind: a
+   transform — even one that moves nothing — would hold every full-screen sheet inside the
+   screen instead of the window, and leave the dock on top of it (BUG-0003). */
 @keyframes page-in {
   from {
     opacity: 0;
     transform: translateY(10px);
   }
+}
+
+@keyframes leaving {
   to {
-    opacity: 1;
-    transform: translateY(0);
+    opacity: 0.35;
   }
 }
 
 @keyframes sweep {
   to {
     transform: translateX(100%);
-  }
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
   }
 }
 
@@ -565,11 +565,9 @@
   .stamp-thump,
   .rise,
   .page-in,
+  .page-in.leaving,
   .skeleton::after {
     animation: none;
-  }
-  .stamp-loader-ring {
-    animation-duration: 2.4s;
   }
   .btn,
   .tab-stub {

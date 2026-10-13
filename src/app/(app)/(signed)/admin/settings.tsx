@@ -1,36 +1,68 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { FormError } from "@/components/field";
+import { RowsSkeleton } from "@/components/loading";
+import { useLive } from "@/components/use-live";
 import { useI18n } from "@/i18n/provider";
 import { api, isApiError } from "@/lib/api";
 import type { Settings } from "@/lib/types";
 
 export function SettingsTab() {
-  const { t, error: errorText } = useI18n();
-  const [settings, setSettings] = useState<Settings | null>(null);
-  const [days, setDays] = useState<number[]>([]);
-  const [busy, setBusy] = useState(false);
+  const { t } = useI18n();
+  const { data, failure, set } = useLive<Settings>("/admin/settings");
+  // Kept above the form: the form starts again whenever the settings change, and saving
+  // changes them.
   const [saved, setSaved] = useState(false);
+
+  if (!data) {
+    return (
+      <div className="max-w-2xl space-y-7">
+        <h1 className="title">{t.admin.navSettings}</h1>
+        {failure ? <FormError code={failure} /> : <RowsSkeleton rows={4} />}
+      </div>
+    );
+  }
+
+  // Keyed by the settings themselves. If someone else changed them while this tab was away,
+  // the form starts again from what is true now instead of quietly saving over it.
+  return (
+    <SettingsForm
+      key={JSON.stringify(data)}
+      settings={data}
+      saved={saved}
+      onEdit={() => setSaved(false)}
+      onSaved={(updated) => {
+        set(updated);
+        setSaved(true);
+      }}
+    />
+  );
+}
+
+function SettingsForm({
+  settings,
+  saved,
+  onEdit,
+  onSaved,
+}: {
+  settings: Settings;
+  saved: boolean;
+  onEdit: () => void;
+  onSaved: (settings: Settings) => void;
+}) {
+  const { t, error: errorText } = useI18n();
+  const [days, setDays] = useState<number[]>(settings.openDays);
+  const [busy, setBusy] = useState(false);
   const [fields, setFields] = useState<Record<string, string>>({});
   const [failure, setFailure] = useState<string | null>(null);
-
-  useEffect(() => {
-    api
-      .get<Settings>("/admin/settings")
-      .then((loaded) => {
-        setSettings(loaded);
-        setDays(loaded.openDays);
-      })
-      .catch((error) => setFailure(isApiError(error) ? error.code : "server_error"));
-  }, []);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const number = (name: string) => Number(form.get(name));
     setBusy(true);
-    setSaved(false);
+    onEdit();
     setFields({});
     setFailure(null);
     try {
@@ -43,17 +75,13 @@ export function SettingsTab() {
         defaultInviteQuota: number("defaultInviteQuota"),
         regularAfterVisits: number("regularAfterVisits"),
       });
-      setSettings(updated);
-      setDays(updated.openDays);
-      setSaved(true);
+      onSaved(updated);
     } catch (error) {
       if (isApiError(error) && Object.keys(error.fields).length > 0) setFields(error.fields);
       else setFailure(isApiError(error) ? error.code : "server_error");
     }
     setBusy(false);
   }
-
-  if (!settings) return failure ? <FormError code={failure} /> : <p className="text-desk-soft">{t.common.loading}</p>;
 
   const weekdays = t.admin.weekdays.split(",");
   // Monday first, as calendars are read here; the API numbers days from Sunday = 0.

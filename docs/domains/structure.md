@@ -47,6 +47,11 @@ The session is an httpOnly cookie set by the API. This app never sees a token.
   invites and profile.
 - `/login` only ever redirects to a path on this site (`safeNext`).
 - Client components get the account from `useMe()` (`components/me.tsx`).
+- **Signing in is a full page load** (`lib/fresh-page.ts`), not a move inside the app. The app
+  holds things for whoever is signed in — screens fetched ahead, each screen's last answer —
+  and a full load throws them away before the next account sees anything. Signing out leaves
+  for the landing page, which is a full load by itself, and also empties the store. A session
+  that ends while the app is open sends the visitor to `/login` the same way.
 
 These guards are for a good experience. **The API enforces access.** A hidden button protects
 nothing.
@@ -71,21 +76,64 @@ next to the field.
 
 ## Arriving on a screen
 
-A page here waits for the server to say who is signed in before it can render, and the API is
-far away. So nothing may depend on that wait to feel responsive:
+The API is far away, and a guest opens this in a queue. A screen must arrive **in one step**:
+its content, or one placeholder and then its content. Never one placeholder after another,
+never a spinner, never the word "loading". Four things make that so, and each needs the others
+([BUG-0004](../bugs/0004-a-screen-shows-two-placeholders-before-its-content.md)):
 
-- **The dock answers the tap itself.** Its marker moves at once (`Dock` remembers the tap
-  together with the page it was made on, and forgets it when the address changes).
-- **Every signed-in route has a `loading.tsx`** that shows the shape of what is coming: a
-  ticket outline, rows, or the stamp loader — on the right ground colour, so there is no flash.
-- **The screen eases in** (`.page-in`, keyed by the address in `signed-chrome.tsx`).
-- In-screen loads use the same skeletons from `components/loading.tsx`, never the bare word
-  "loading" on an empty page.
+1. **The page brings the first answer with it.** Each `page.tsx` fetches its screen's data on
+   the server, together with the sign-in check, and hands it to the screen as `first`:
+
+   ```tsx
+   const [, first] = await Promise.all([requireMe("/pass"), firstAnswer<TonightResponse>("/pass/tonight")]);
+   return <PassScreen first={first} />;
+   ```
+
+   `Promise.all`, not one after the other. `firstAnswer` (`lib/server-api.ts`) returns null if
+   the API refuses or is slow; the screen then asks for itself.
+2. **A screen remembers its last answer** (`lib/live-store.ts`, read through `useLive`). Coming
+   back to a tab shows what was there, at once, and asks again behind it. What the phone last
+   heard wins over what came with the page: the page may have been fetched ahead minutes ago,
+   before the member pressed a button on that very screen.
+3. **The dock has every tab in hand.** Its links are `prefetch` (the whole page, not only the
+   placeholder), and it asks again every 20 seconds, which costs nothing while the copy is
+   fresh and replaces it soon after it goes stale (five minutes). A tap then shows the screen
+   with no request: 60–125 ms.
+4. **One placeholder per screen.** Each screen exports its own (`PassSkeleton`,
+   `InvitesSkeleton`, `DoorSkeleton`, `AdminSkeleton`), used by the route's `loading.tsx` and
+   by the screen itself when it has no data. Whatever needs nothing from the server is drawn
+   for real: the frame of the door and of the back office, a screen's title, the whole profile.
+
+When a tab is tapped before its page is in hand, the screen being left steps back (`.leaving`)
+so the tap is plainly answered, and the dock's marker has already moved.
+
+**`next dev` does not prefetch.** Point 3 cannot be seen in development or in the ordinary
+end-to-end run. `node e2e/warm-tabs.mjs` measures it against a production build
+(`pnpm build && pnpm exec next start`) or the live site.
 
 ## Live data
 
-There are no websockets. Screens that must stay current poll with `usePoll` (`components/me.tsx`),
-which only runs while the tab is visible:
+There are no websockets. A screen that must stay current reads its data with `useLive`
+(`components/use-live.ts`), which asks on arrival and then on an interval, only while the tab
+is visible:
+
+```tsx
+const { data, failure, reload, set } = useLive<TonightResponse>("/pass/tonight", { every: 4000, first });
+```
+
+- `set` puts the reply to a button on screen at once. A poll that was already on its way is
+  then dropped: it describes the moment before.
+- **A failure is not news until it lasts**
+  ([BUG-0005](../bugs/0005-one-failed-refresh-puts-a-red-box-on-a-working-screen.md)). A failed
+  request is tried again twice before anyone is told. A screen that has its content reports a
+  failure only when asking has failed twice running, and keeps its content either way. A
+  refusal (403, 404, 429) is an answer and is not retried.
+- An answer nobody is looking at is kept for five minutes. One that is on screen is kept for
+  as long as it is on screen — a pass held up in a basement must not vanish.
+- **Nothing is written to the store while rendering on the server.** There the module is
+  shared by every visitor.
+
+How often each screen asks:
 
 | Screen | Every | Why |
 |---|---|---|

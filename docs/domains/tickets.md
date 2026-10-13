@@ -50,7 +50,9 @@ The stamp lands beside the name. **Never on the QR.**
 
 ## The pass page
 
-`(signed)/(member)/pass/pass-screen.tsx`. What it shows depends on the account:
+`(signed)/(member)/pass/pass-screen.tsx`. The pass comes with the page (`first`), so the screen
+opens holding it; `PassSkeleton` is what shows when it does not. What it shows depends on the
+account:
 
 - a ticket for tonight, if there is one — whatever the account's status (a guest may hold one
   from an invite);
@@ -94,7 +96,8 @@ it does not generate dates.
 
 ## The invite link
 
-`(app)/i/[code]/invite-screen.tsx`. No account is needed.
+`(app)/i/[code]/invite-screen.tsx`. No account is needed. The invite is fetched with the page,
+as a door ticket is: someone opening the link sees the ticket in the first paint, not an outline.
 
 - Pending: the invite drawn as the ticket it will become, with Accept and Decline.
 - Accepted: the live ticket, and "keep this page — it is your ticket".

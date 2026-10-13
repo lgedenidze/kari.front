@@ -1,16 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { Field, FormError } from "@/components/field";
 import { useI18n } from "@/i18n/provider";
 import { api, isApiError } from "@/lib/api";
+import { openFresh } from "@/lib/fresh-page";
 import type { Me } from "@/lib/types";
 
 export function LoginForm({ next }: { next: string }) {
   const { t } = useI18n();
-  const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
 
@@ -21,8 +20,10 @@ export function LoginForm({ next }: { next: string }) {
     setFailure(null);
     try {
       await api.post<Me>("/auth/login", { phone: form.get("phone"), password: form.get("password") });
-      router.push(next);
-      router.refresh();
+      // A whole new page, not a move inside the app: whatever this phone was holding for the
+      // last account — screens fetched ahead, their last answers — is gone before the next
+      // account sees anything.
+      openFresh(next);
     } catch (error) {
       setFailure(isApiError(error) ? error.code : "server_error");
       setBusy(false);

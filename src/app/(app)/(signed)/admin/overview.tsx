@@ -1,28 +1,22 @@
 "use client";
 
-import { useState } from "react";
 import { FormError } from "@/components/field";
-import { usePoll } from "@/components/me";
+import { RowsSkeleton } from "@/components/loading";
+import { useLive } from "@/components/use-live";
 import { useI18n } from "@/i18n/provider";
-import { api, isApiError } from "@/lib/api";
 import type { Overview } from "@/lib/types";
 import type { AdminTab } from "./admin-screen";
 
-export function OverviewTab({ go }: { go: (tab: AdminTab) => void }) {
+/** Tonight's figures on their way: the one placeholder this tab has, here and in loading.tsx. */
+export function OverviewSkeleton() {
+  return <RowsSkeleton rows={4} title />;
+}
+
+export function OverviewTab({ go, first }: { go: (tab: AdminTab) => void; first: Overview | null }) {
   const { t, fill, night } = useI18n();
-  const [data, setData] = useState<Overview | null>(null);
-  const [failure, setFailure] = useState<string | null>(null);
+  const { data, failure } = useLive<Overview>("/admin/overview", { every: 10000, first });
 
-  usePoll(async () => {
-    try {
-      setData(await api.get<Overview>("/admin/overview"));
-      setFailure(null);
-    } catch (error) {
-      setFailure(isApiError(error) ? error.code : "server_error");
-    }
-  }, 10000);
-
-  if (!data) return failure ? <FormError code={failure} /> : <p className="text-desk-soft">{t.common.loading}</p>;
+  if (!data) return failure ? <FormError code={failure} /> : <OverviewSkeleton />;
 
   const { tonight } = data;
   const figures: [string, number, string?][] = [

@@ -56,7 +56,8 @@ Georgian has no capital letters. Do not build hierarchy on uppercase.
 | `Dock` | `components/app-chrome.tsx` | The floating navigation on every signed-in screen. |
 | `NightPicker` | `components/night-picker.tsx` | The two-week calendar. |
 | icons | `components/icons.tsx` | The app's own icons: ticket, invite, viewfinder, rubber stamp, person-in-ring. |
-| `Field`, `FormError` | `components/field.tsx` | A labelled input wired to its hint and error. |
+| `Field`, `FormError` | `components/field.tsx` | A labelled input wired to its hint and error. A password field can be looked at before it is sent: there is no second field to catch a slip, and no "forgot password". |
+| `TicketSkeleton`, `RowsSkeleton` | `components/loading.tsx` | The one material for "not here yet": a quiet block with a light sweeping across. See structure.md, "Arriving on a screen". |
 
 CSS classes worth knowing: `.btn` with `.btn-paper` (main action on ink), `.btn-ink` (main
 action on paper), `.btn-line`, `.btn-go`, `.btn-stop`, `.btn-big`; `.paper`; `.ticket` and
@@ -80,13 +81,22 @@ nobody leaves a decision by accident.
    ground that is not ink, set `--ground` on a parent.
 3. **Forms are always on paper or desk,** never straight on ink.
 4. **One orchestrated motion per screen.** The stamp thump is it. No fade-ins on scroll.
-   `prefers-reduced-motion` turns motion off.
+   `prefers-reduced-motion` turns motion off. A screen eases in once, as a whole (`.page-in`);
+   nothing inside it rises again. `.rise` is for what appears because of a tap: a sheet, a
+   form opened by a button.
 5. **Everything works at 360px wide,** with no sideways scroll. A `fieldset` needs `min-w-0`
    before its content can shrink.
 6. **Tap targets are at least 44px.** Inputs are 16px so iOS does not zoom.
 7. **Focus is always visible** — a 2px outline in the text colour.
 8. **Meaning never rests on colour alone.** A verdict band has a word; a chip has a label.
 9. **Icons are drawn here, in the app's vocabulary.** Do not add an icon library.
+10. **Nothing that wraps a screen may keep a transform.** A transform — even one that moves
+    nothing — makes every `position: fixed` sheet inside it sit in the screen instead of the
+    window, with the dock on top
+    ([BUG-0003](../bugs/0003-a-sheet-at-the-door-leaves-the-dock-on-top.md)). An entrance
+    animation says where it starts and ends as the element itself is.
+11. **An error state offers the way out as a button.** "No camera — find the guest by name"
+    comes with the Find button, not only the sentence.
 
 ## The Wox credit
 

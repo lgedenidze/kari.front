@@ -1,5 +1,5 @@
-import { RowsSkeleton } from "@/components/loading";
+import { InvitesSkeleton } from "./invites-screen";
 
 export default function Loading() {
-  return <RowsSkeleton rows={3} />;
+  return <InvitesSkeleton />;
 }

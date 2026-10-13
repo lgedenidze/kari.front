@@ -1,43 +1,33 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import { FormError } from "@/components/field";
 import { LiveTicket } from "@/components/live-ticket";
-import { usePoll } from "@/components/me";
+import { TicketSkeleton } from "@/components/loading";
 import { SaveToPhone } from "@/components/save-to-phone";
 import { StubCode, TicketCard } from "@/components/ticket";
+import { useLive } from "@/components/use-live";
 import { useI18n } from "@/i18n/provider";
 import { api, isApiError } from "@/lib/api";
 import type { InviteLinkResponse } from "@/lib/types";
 
-export function InviteScreen({ code }: { code: string }) {
+export function InviteScreen({ code, first }: { code: string; first: InviteLinkResponse | null }) {
   const { t, fill, night } = useI18n();
-  const [data, setData] = useState<InviteLinkResponse | null>(null);
-  const [missing, setMissing] = useState(false);
-  const [failure, setFailure] = useState<string | null>(null);
+  // Kept current: this is how the guest's phone learns the door let them in.
+  const live = useLive<InviteLinkResponse>(`/invites/code/${encodeURIComponent(code)}`, { every: 5000, first });
+  const { data, missing } = live;
+  const [answerFailure, setAnswerFailure] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-
-  const load = useCallback(async () => {
-    try {
-      setData(await api.get<InviteLinkResponse>(`/invites/code/${encodeURIComponent(code)}`));
-      setFailure(null);
-    } catch (error) {
-      if (isApiError(error) && error.status === 404) setMissing(true);
-      else setFailure(isApiError(error) ? error.code : "server_error");
-    }
-  }, [code]);
-
-  // Keeps the ticket current: this is how the guest's phone learns the door let them in.
-  usePoll(load, 5000, !missing);
+  const failure = answerFailure ?? live.failure;
 
   async function answer(action: "accept" | "decline") {
     setBusy(true);
-    setFailure(null);
+    setAnswerFailure(null);
     try {
-      setData(await api.post<InviteLinkResponse>(`/invites/code/${encodeURIComponent(code)}/${action}`));
+      live.set(await api.post<InviteLinkResponse>(`/invites/code/${encodeURIComponent(code)}/${action}`));
     } catch (error) {
-      setFailure(isApiError(error) ? error.code : "server_error");
+      setAnswerFailure(isApiError(error) ? error.code : "server_error");
     }
     setBusy(false);
   }
@@ -49,7 +39,7 @@ export function InviteScreen({ code }: { code: string }) {
         <FormError code={failure} />
       </div>
     ) : (
-      <div className="ticket h-[30rem] w-full max-w-[22rem] animate-pulse opacity-40" aria-label={t.common.loading} />
+      <TicketSkeleton />
     );
   }
 
@@ -144,7 +134,7 @@ function stateWord(t: ReturnType<typeof useI18n>["t"], status: string, admitted:
 
 function Notice({ title, body, children }: { title: string; body: string; children?: React.ReactNode }) {
   return (
-    <div className="paper rise w-full p-6">
+    <div className="paper w-full p-6">
       <h1 className="text-3xl">{title}</h1>
       <p className="mt-3 text-paper-soft">{body}</p>
       {children}

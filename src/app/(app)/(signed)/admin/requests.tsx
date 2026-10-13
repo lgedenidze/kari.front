@@ -1,37 +1,36 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import { FormError } from "@/components/field";
-import { usePoll } from "@/components/me";
+import { RowsSkeleton } from "@/components/loading";
+import { refreshLive, useLive } from "@/components/use-live";
 import { useI18n } from "@/i18n/provider";
 import { api, isApiError } from "@/lib/api";
+import { peek } from "@/lib/live-store";
 import type { AdminUser, UserPage } from "@/lib/types";
+
+const QUEUE = "/admin/users?status=pending";
 
 /** The review queue, oldest first: open the Facebook profile, then say yes or no. */
 export function RequestsTab() {
   const { t } = useI18n();
-  const [people, setPeople] = useState<AdminUser[] | null>(null);
-  const [failure, setFailure] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    try {
-      setPeople((await api.get<UserPage>("/admin/users?status=pending")).items);
-      setFailure(null);
-    } catch (error) {
-      setFailure(isApiError(error) ? error.code : "server_error");
-    }
-  }, []);
-
-  usePoll(load, 15000);
+  const live = useLive<UserPage>(QUEUE, { every: 15000 });
+  const people = live.data?.items ?? null;
+  const [reviewFailure, setReviewFailure] = useState<string | null>(null);
+  const failure = reviewFailure ?? live.failure;
 
   async function review(id: string, decision: "approve" | "reject", note: string) {
-    setFailure(null);
+    setReviewFailure(null);
     try {
       await api.post(`/admin/users/${id}/review`, { decision, note });
-      setPeople((current) => current?.filter((person) => person.id !== id) ?? null);
+      // Out of the queue at once, without waiting for the next poll to say so.
+      const queue = peek<UserPage>(QUEUE);
+      if (queue) live.set({ ...queue, items: queue.items.filter((person) => person.id !== id), total: Math.max(0, queue.total - 1) });
+      // The first tab counts the requests still waiting.
+      refreshLive("/admin/overview");
     } catch (error) {
-      setFailure(isApiError(error) ? error.code : "server_error");
-      void load();
+      setReviewFailure(isApiError(error) ? error.code : "server_error");
+      void live.reload();
     }
   }
 
@@ -40,7 +39,7 @@ export function RequestsTab() {
       <h1 className="title">{t.admin.navRequests}</h1>
       {failure && <FormError code={failure} />}
       {!people ? (
-        <p className="text-desk-soft">{t.common.loading}</p>
+        <RowsSkeleton rows={3} />
       ) : people.length === 0 ? (
         <p className="rounded-2xl border-2 border-dashed border-desk-line p-8 text-center text-lg text-desk-soft">
           {t.admin.requestsEmpty}

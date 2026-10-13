@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { FindIcon } from "@/components/icons";
 import { useI18n } from "@/i18n/provider";
 import { codeIdentity, createPresence } from "@/lib/scan-presence";
 
@@ -19,16 +20,68 @@ type CameraState = "starting" | "running" | "blocked" | "missing";
 
 const SCAN_EVERY_MS = 130;
 
+// The four corners mark where to hold the code. Dim while the camera wakes, paper once it
+// sees, green while a code is being checked.
+const CORNERS = [
+  "left-0 top-0 border-l-[5px] border-t-[5px] rounded-tl-3xl",
+  "right-0 top-0 border-r-[5px] border-t-[5px] rounded-tr-3xl",
+  "left-0 bottom-0 border-l-[5px] border-b-[5px] rounded-bl-3xl",
+  "right-0 bottom-0 border-r-[5px] border-b-[5px] rounded-br-3xl",
+];
+const CORNER_TONE = { dim: "border-ink-line", paper: "border-paper", go: "border-go" };
+
+/** The scanner's window: a dark square with its four corners. */
+function ScannerFrame({ corners, children }: { corners: keyof typeof CORNER_TONE | null; children: ReactNode }) {
+  return (
+    <div className="relative aspect-square w-full overflow-hidden rounded-3xl bg-ink-deep ring-2 ring-ink-line">
+      {children}
+      {corners && (
+        <div aria-hidden="true" className="pointer-events-none absolute inset-[14%]">
+          {CORNERS.map((corner) => (
+            <span key={corner} className={`absolute h-12 w-12 transition-colors duration-150 ${CORNER_TONE[corners]} ${corner}`} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ScannerNote({ children }: { children: ReactNode }) {
+  return <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6 text-center">{children}</div>;
+}
+
+/**
+ * The scanner before its camera is on. The door draws this while the page is still arriving,
+ * and the scanner draws exactly the same thing while the camera wakes — so the window is
+ * simply there from the tap, and the picture appears in it.
+ */
+export function ScannerStarting() {
+  const { t } = useI18n();
+  return (
+    <ScannerFrame corners="dim">
+      <ScannerNote>
+        <p className="max-w-[18rem] text-paper-light">{t.door.cameraStarting}</p>
+      </ScannerNote>
+    </ScannerFrame>
+  );
+}
+
 export function Scanner({
   active,
   checking,
   onToken,
+  onCamera,
+  onFind,
 }: {
   /** False while a result is on screen: the camera stays on but nothing is read. */
   active: boolean;
   /** A read is being checked with the server. */
   checking: boolean;
   onToken: (token: string) => void;
+  /** Told whether there is a camera to point: false once it is blocked or missing. */
+  onCamera?: (usable: boolean) => void;
+  /** The way forward when there is no camera: find the guest by name. */
+  onFind?: () => void;
 }) {
   const { t } = useI18n();
   const video = useRef<HTMLVideoElement>(null);
@@ -43,6 +96,15 @@ export function Scanner({
   useEffect(() => {
     report.current = onToken;
   });
+
+  const usable = state === "starting" || state === "running";
+  const tell = useRef(onCamera);
+  useEffect(() => {
+    tell.current = onCamera;
+  });
+  useEffect(() => {
+    tell.current?.(usable);
+  }, [usable]);
 
   useEffect(() => {
     let cancelled = false;
@@ -183,19 +245,11 @@ export function Scanner({
   }
 
   return (
-    <div className="relative aspect-square w-full overflow-hidden rounded-3xl bg-ink-deep ring-2 ring-ink-line">
+    <ScannerFrame corners={state === "running" ? (checking ? "go" : "paper") : state === "starting" ? "dim" : null}>
       <video ref={video} playsInline muted autoPlay className="h-full w-full object-cover" aria-label={t.door.pointCamera} />
 
       {state === "running" && (
         <>
-          {/* The four corners mark where to hold the code. They light up while one is checked. */}
-          <div aria-hidden="true" className="pointer-events-none absolute inset-[14%]">
-            {["left-0 top-0 border-l-[5px] border-t-[5px] rounded-tl-3xl", "right-0 top-0 border-r-[5px] border-t-[5px] rounded-tr-3xl",
-              "left-0 bottom-0 border-l-[5px] border-b-[5px] rounded-bl-3xl", "right-0 bottom-0 border-r-[5px] border-b-[5px] rounded-br-3xl"].map((corner) => (
-              <span key={corner} className={`absolute h-12 w-12 transition-colors duration-150 ${checking ? "border-go" : "border-paper"} ${corner}`} />
-            ))}
-          </div>
-
           {/* The moment a code is read, say so — before the answer is back. On a slow
               connection this is what stops staff waving the phone about. */}
           {checking && (
@@ -225,9 +279,9 @@ export function Scanner({
       )}
 
       {state !== "running" && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6 text-center">
+        <ScannerNote>
           <p className="max-w-[18rem] text-paper-light">
-            {state === "starting" ? t.common.loading : state === "blocked" ? t.door.cameraBlocked : t.door.cameraMissing}
+            {state === "starting" ? t.door.cameraStarting : state === "blocked" ? t.door.cameraBlocked : t.door.cameraMissing}
           </p>
           {state === "blocked" && (
             <button
@@ -241,8 +295,15 @@ export function Scanner({
               {t.door.startCamera}
             </button>
           )}
-        </div>
+          {/* No camera is not a dead end: the same guest can be found by name. */}
+          {state !== "starting" && onFind && (
+            <button type="button" className="btn btn-line text-paper-light" onClick={onFind}>
+              <FindIcon width={20} height={20} />
+              {t.door.tabFind}
+            </button>
+          )}
+        </ScannerNote>
       )}
-    </div>
+    </ScannerFrame>
   );
 }

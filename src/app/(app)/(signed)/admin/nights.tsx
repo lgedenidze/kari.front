@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { FormError } from "@/components/field";
-import { usePoll } from "@/components/me";
+import { RowsSkeleton } from "@/components/loading";
+import { useLive } from "@/components/use-live";
 import { useI18n } from "@/i18n/provider";
 import { api, isApiError } from "@/lib/api";
 import type { NightInfo } from "@/lib/types";
@@ -17,26 +18,18 @@ const SCHEDULE_NIGHTS = 21;
  */
 export function NightsTab() {
   const { t, night } = useI18n();
-  const [nights, setNights] = useState<NightInfo[] | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
-  const [failure, setFailure] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    try {
-      setNights(await api.get<NightInfo[]>("/admin/nights"));
-      setFailure(null);
-    } catch (error) {
-      setFailure(isApiError(error) ? error.code : "server_error");
-    }
-  }, []);
-
   const [deleting, setDeleting] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [removeFailure, setRemoveFailure] = useState<string | null>(null);
 
-  // Loads now, and again each minute: a night rolls over at the cutoff while this tab is open.
+  // Asked now, and again each minute: a night rolls over at the cutoff while this tab is open.
   // Paused while a form or a question is open, so nothing moves under the admin's finger.
-  usePoll(load, 60000, editing === null && !adding && deleting === null);
+  const live = useLive<NightInfo[]>("/admin/nights", { every: 60000, enabled: editing === null && !adding && deleting === null });
+  const nights = live.data;
+  const load = live.reload;
+  const failure = removeFailure ?? live.failure;
 
   const done = () => {
     setEditing(null);
@@ -47,13 +40,13 @@ export function NightsTab() {
   // Deleting a night removes its name and its changes; the weekly schedule decides it again.
   async function remove(nightToDelete: string) {
     setBusy(true);
-    setFailure(null);
+    setRemoveFailure(null);
     try {
       await api.delete(`/admin/nights/${nightToDelete}`);
       setDeleting(null);
       await load();
     } catch (error) {
-      setFailure(isApiError(error) ? error.code : "server_error");
+      setRemoveFailure(isApiError(error) ? error.code : "server_error");
     }
     setBusy(false);
   }
@@ -62,7 +55,7 @@ export function NightsTab() {
     return (
       <div className="space-y-5">
         <h1 className="title">{t.admin.navNights}</h1>
-        {failure ? <FormError code={failure} /> : <p className="text-desk-soft">{t.common.loading}</p>}
+        {failure ? <FormError code={failure} /> : <RowsSkeleton rows={4} />}
       </div>
     );
   }

@@ -1,8 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+// Not a public entry point: Next.js 16.4 exposes the "whole page" kind of prefetch only here.
+// Recheck this import when upgrading Next (the build fails loudly if the path moves).
+import { PrefetchKind } from "next/dist/client/components/router-reducer/router-reducer-types";
+import { useRouter } from "next/navigation";
+import { useEffect, type ReactNode } from "react";
 import { useI18n } from "@/i18n/provider";
 import { LANG_COOKIE, type Lang } from "@/venue";
 import { VenueMark } from "./brand";
@@ -62,10 +65,23 @@ export function TopBar({ right }: { right?: ReactNode }) {
  *
  * The place you are in is a paper ticket stub, notched like every ticket in the app, and it
  * slides to the tab you tap.
+ *
+ * `shown` is where the marker sits: the tab just tapped, or else the page that is open. The
+ * frame above decides that (signed-chrome.tsx), because the screen itself answers a tap too.
  */
-export function Dock({ role, invitesWaiting = 0 }: { role: UserRole; invitesWaiting?: number }) {
+export function Dock({
+  role,
+  invitesWaiting = 0,
+  shown,
+  onTap,
+}: {
+  role: UserRole;
+  invitesWaiting?: number;
+  shown: string;
+  onTap: (href: string) => void;
+}) {
   const { t } = useI18n();
-  const pathname = usePathname();
+  const router = useRouter();
   const tabs = [
     { href: "/pass", label: t.pass.title, icon: PassIcon, badge: 0 },
     { href: "/invites", label: t.invites.title, icon: InviteIcon, badge: invitesWaiting },
@@ -73,13 +89,27 @@ export function Dock({ role, invitesWaiting = 0 }: { role: UserRole; invitesWait
     ...(role === "admin" ? [{ href: "/admin", label: t.admin.short, icon: OfficeIcon, badge: 0 }] : []),
     { href: "/profile", label: t.profile.title, icon: ProfileIcon, badge: 0 },
   ];
-  // Where the marker sits. A tap moves it at once — the page may take a moment to arrive, and
-  // a bar that does not answer the finger feels broken. The tap is remembered together with
-  // the page it was made on, so it stops counting by itself as soon as the address changes.
-  const [tapped, setTapped] = useState<{ href: string; from: string } | null>(null);
-  const shown = tapped && tapped.from === pathname ? tapped.href : pathname;
   const current = tabs.findIndex((tab) => shown.startsWith(tab.href));
   const count = tabs.length;
+
+  // Every tab is fetched ahead, in full (`prefetch` on the links below), so a tap has the
+  // screen in hand and shows it at once. What was fetched goes stale after five minutes, and
+  // Next.js only fetches again on a navigation or a touch — so someone who stays on one screen
+  // longer than that (the door, all night) would wait on their next tap. Asking again here
+  // costs nothing while the copy is fresh, and replaces it soon after it is not.
+  const hrefs = tabs.map((tab) => tab.href).join(" ");
+  useEffect(() => {
+    const keepWarm = () => {
+      if (document.visibilityState !== "visible") return;
+      for (const href of hrefs.split(" ")) router.prefetch(href, { kind: PrefetchKind.FULL });
+    };
+    const timer = setInterval(keepWarm, 20_000);
+    document.addEventListener("visibilitychange", keepWarm);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", keepWarm);
+    };
+  }, [router, hrefs]);
 
   return (
     <nav
@@ -102,9 +132,12 @@ export function Dock({ role, invitesWaiting = 0 }: { role: UserRole; invitesWait
             const active = index === current;
             return (
               <li key={tab.href}>
+                {/* Fetched ahead, in full: a tap then has the screen in hand and shows it at once,
+                    with no placeholder. Only tabs this role may open are ever drawn here. */}
                 <Link
                   href={tab.href}
-                  onClick={() => setTapped({ href: tab.href, from: pathname })}
+                  prefetch
+                  onClick={() => onTap(tab.href)}
                   aria-current={active ? "page" : undefined}
                   className={`flex h-[3.75rem] flex-col items-center justify-center rounded-[1.2rem] px-0.5 pt-0.5 text-[0.72rem] font-bold transition-colors duration-200 ${
                     active ? "text-ink-deep" : "text-ink-soft hover:text-paper-light"

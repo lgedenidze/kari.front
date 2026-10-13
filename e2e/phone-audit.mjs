@@ -111,7 +111,8 @@ await shot(invited, "invite-link", { full: true });
 const staff = await signIn(await context(), seed.StaffPhone, seed.StaffPassword);
 await staff.goto(`${base}/door`);
 await shot(staff, "door-scan");
-await staff.getByRole("button", { name: "ძებნა" }).click();
+// The tab, not the "find by name" button the scanner offers when there is no camera.
+await staff.getByRole("navigation", { name: "კარი" }).getByRole("button", { name: "ძებნა" }).click();
 await staff.getByRole("searchbox").fill("აბაშიძე");
 await shot(staff, "door-find", { settle: 1200 });
 await staff.locator("main ul li button").first().click();

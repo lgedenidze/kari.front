@@ -95,3 +95,25 @@ export function LogIcon(props: SVGProps<SVGSVGElement>) {
     </Icon>
   );
 }
+
+/** Show what was typed: an eye. */
+export function EyeIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" />
+      <circle cx="12" cy="12" r="2.8" />
+    </Icon>
+  );
+}
+
+/** Hide it again: the eye, struck through. */
+export function EyeOffIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M9.9 5.8A9 9 0 0 1 12 5.5c6 0 9.5 6.5 9.5 6.5a17 17 0 0 1-2.6 3.4" />
+      <path d="M6.3 7.4A16.5 16.5 0 0 0 2.5 12s3.5 6.5 9.5 6.5a8.8 8.8 0 0 0 4.3-1.1" />
+      <path d="M10 10a2.8 2.8 0 0 0 4 4" />
+      <path d="m3.5 3.5 17 17" />
+    </Icon>
+  );
+}

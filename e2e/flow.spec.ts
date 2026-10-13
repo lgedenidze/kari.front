@@ -27,7 +27,7 @@ async function signIn(browser: Browser, phone: string, password: string): Promis
   const page = await (await english(browser)).newPage();
   await page.goto("/login");
   await page.getByLabel("Phone number").fill(phone);
-  await page.getByLabel("Password").fill(password);
+  await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Sign in" }).click();
   await page.waitForURL("**/pass");
   return page;
@@ -51,7 +51,7 @@ test("a guest joins, the bar approves, the door scans and admits, and it is in t
   await guest.getByLabel("Last name").fill(last);
   await guest.getByLabel("Phone number").fill(newPhone());
   await guest.getByLabel("Facebook profile link").fill(`facebook.com/nino.flow.${run}`);
-  await guest.getByLabel("Password").fill(PASSWORD);
+  await guest.getByLabel("Password", { exact: true }).fill(PASSWORD);
   await guest.getByText("I am 18 or older.").click();
   await guest.getByText("I agree that the bar stores").click();
   await guest.getByRole("button", { name: "Send request" }).click();

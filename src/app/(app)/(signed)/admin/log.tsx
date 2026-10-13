@@ -1,32 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { FormError } from "@/components/field";
+import { RowsSkeleton } from "@/components/loading";
+import { useLive } from "@/components/use-live";
 import { useI18n } from "@/i18n/provider";
-import { api, isApiError } from "@/lib/api";
 import type { EntriesResponse } from "@/lib/types";
 
 /** Every decision made at the door on one night: who, when, what the scanner said, who decided. */
 export function LogTab() {
   const { t, fill, night, time } = useI18n();
   const [picked, setPicked] = useState("");
-  const [data, setData] = useState<EntriesResponse | null>(null);
-  const [failure, setFailure] = useState<string | null>(null);
-
-  useEffect(() => {
-    let stale = false;
-    api
-      .get<EntriesResponse>(picked ? `/admin/entries?night=${picked}` : "/admin/entries")
-      .then((response) => {
-        if (stale) return;
-        setData(response);
-        setFailure(null);
-      })
-      .catch((error) => !stale && setFailure(isApiError(error) ? error.code : "server_error"));
-    return () => {
-      stale = true;
-    };
-  }, [picked]);
+  // One night at a time. Each night is remembered, so going back to one is immediate.
+  const { data, failure } = useLive<EntriesResponse>(picked ? `/admin/entries?night=${picked}` : "/admin/entries");
 
   return (
     <div className="space-y-5">
@@ -41,7 +27,7 @@ export function LogTab() {
       {failure && <FormError code={failure} />}
 
       {!data ? (
-        <p className="text-desk-soft">{t.common.loading}</p>
+        !failure && <RowsSkeleton rows={4} />
       ) : (
         <>
           <div>

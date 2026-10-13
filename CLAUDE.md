@@ -17,6 +17,9 @@ pnpm test           # vitest: src/**/*.test.ts
 pnpm e2e            # playwright: real browser, real API, the throwaway database
 pnpm build
 vercel --prod       # deploy
+
+node e2e/phone-audit.mjs 360     # photographs every screen at phone size
+node e2e/warm-tabs.mjs           # what a tap on the dock costs — production builds only
 ```
 
 **Do not run `pnpm build` while `pnpm dev` is running here.** They share `.next`; every open
@@ -42,10 +45,12 @@ src/
     manifest.webmanifest/  the home-screen manifest; invite and ticket pages serve their own
     sitemap.ts robots.ts icon.svg apple-icon.png
   components/            ticket, live-ticket, stamp, qr, night-picker, app-chrome (dock), brand, icons,
-                         loading (skeletons), save-to-phone
+                         loading (skeletons), use-live (a screen's data), save-to-phone
   i18n/                  en.ts, ka.ts, formatters, provider
-  lib/                   api (browser), server-api (server), pass-code, scan-presence, web-manifest, types, photo
-e2e/                     playwright flows; phone-audit.mjs photographs every screen at phone size
+  lib/                   api (browser), server-api (server), live-store (what each screen last heard),
+                         pass-code, scan-presence, web-manifest, types, photo
+e2e/                     flow.spec.ts (the journeys), loading.spec.ts (how a screen arrives, on a slowed
+                         server); phone-audit.mjs, warm-tabs.mjs
 ```
 
 **Before working on an area, read its page under [`docs/domains/`](docs/domains/README.md).**
@@ -70,6 +75,16 @@ e2e/                     playwright flows; phone-audit.mjs photographs every scr
   on every request; a stale pass at the door is worse than a slower page.
 - **Do not call `setState` synchronously in an effect.** The lint rule forbids it. Derive the
   value, or set it from a promise or an event. See `scanner.tsx` and `live-ticket.tsx`.
+- **A screen arrives in one step.** Its page fetches the first answer on the server
+  (`firstAnswer`), the screen reads it with `useLive`, and it has exactly one placeholder,
+  shared with its `loading.tsx`. No spinner, no visible "loading", no second placeholder.
+  `docs/domains/structure.md` → "Arriving on a screen". `e2e/loading.spec.ts` enforces it.
+- **One failed refresh is not an error.** `useLive` retries, and stays quiet while the screen
+  has its content. Do not show a poll's failure yourself.
+- **Never write to `lib/live-store.ts` while rendering.** On the server that module is shared
+  by every visitor.
+- **Nothing that wraps a screen may keep a transform** — it traps every full-screen sheet
+  inside the screen (BUG-0003).
 - **No stamp, badge or overlay on a QR code.** It breaks the scan.
 - **Check every screen at phone size before calling UI work done:** `node e2e/phone-audit.mjs 360`
   photographs all of them into `test-results/phone/` and reports any that scroll sideways.

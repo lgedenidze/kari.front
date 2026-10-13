@@ -2,19 +2,24 @@
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { FormError } from "@/components/field";
+import { RowsSkeleton } from "@/components/loading";
 import { useI18n } from "@/i18n/provider";
 import { api, isApiError } from "@/lib/api";
+import { peek, put } from "@/lib/live-store";
 import type { AdminUser, AdminUserDetail, InviteMode, Settings, UserPage, UserRole, UserStatus } from "@/lib/types";
 
 const STATUSES: UserStatus[] = ["approved", "pending", "guest", "rejected", "banned"];
 const ROLES: UserRole[] = ["member", "staff", "admin"];
+
+// The list as it opens — everyone, first page. Remembered, so the tab opens on it at once.
+const EVERYONE = "/admin/users?page=1";
 
 export function PeopleTab() {
   const { t, fill } = useI18n();
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<UserStatus | "">("");
   const [page, setPage] = useState(1);
-  const [data, setData] = useState<UserPage | null>(null);
+  const [data, setData] = useState<UserPage | null>(() => peek<UserPage>(EVERYONE) ?? null);
   const [failure, setFailure] = useState<string | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
 
@@ -23,7 +28,10 @@ export function PeopleTab() {
     if (query.trim()) params.set("q", query.trim());
     if (status) params.set("status", status);
     try {
-      setData(await api.get<UserPage>(`/admin/users?${params}`));
+      const path = `/admin/users?${params}`;
+      const found = await api.get<UserPage>(path);
+      if (path === EVERYONE) put(EVERYONE, found);
+      setData(found);
       setFailure(null);
     } catch (error) {
       setFailure(isApiError(error) ? error.code : "server_error");
@@ -90,7 +98,7 @@ export function PeopleTab() {
       {failure && <FormError code={failure} />}
 
       {!data ? (
-        <p className="text-desk-soft">{t.common.loading}</p>
+        !failure && <RowsSkeleton rows={5} />
       ) : data.items.length === 0 ? (
         <p className="py-8 text-center text-desk-soft">{t.admin.nobody}</p>
       ) : (
@@ -240,7 +248,7 @@ function PersonDetail({ id, onBack }: { id: string; onBack: () => void }) {
         <button type="button" className="btn btn-line btn-small" onClick={onBack}>
           {t.common.back}
         </button>
-        {failure ? <FormError code={failure} /> : <p className="text-desk-soft">{t.common.loading}</p>}
+        {failure ? <FormError code={failure} /> : <RowsSkeleton rows={4} title />}
       </div>
     );
   }

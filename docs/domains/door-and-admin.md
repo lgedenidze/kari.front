@@ -13,6 +13,12 @@ the dark, in seconds; the back office sitting down, in daylight, for minutes.
 - Three tabs: **Scan**, **Find**, **Log**.
 - The dock at the bottom.
 
+The frame — who is on the door, the counters, the tabs — is `DoorFrame`. It needs nothing from
+the server (a counter with no number yet shows a dash), so `DoorSkeleton` draws the very same
+frame while the page is on its way, with the scanner's window waiting in it
+(`ScannerStarting`). The scanner draws that same window while the camera wakes. The window is
+simply there from the tap, and the picture appears in it.
+
 ### Scanning
 
 `scanner.tsx` opens the rear camera and reads QR codes.
@@ -32,7 +38,8 @@ the dark, in seconds; the back office sitting down, in daylight, for minutes.
 - The camera keeps running while a result is up but stops reading, so it is ready at once.
 - The screen is kept awake; the camera is started again if the phone took it away; a torch
   button appears where the device has one.
-- A blocked or missing camera says so, and points to Find.
+- A blocked or missing camera says so, and offers **Find** as a button in the same place. The
+  line "point the camera at the pass" is not shown then.
 - **The camera needs https.** On plain http (other than localhost) browsers refuse.
 
 A read token is posted to `POST /api/door/scan`. The phone vibrates: once for go, twice otherwise.
@@ -74,6 +81,10 @@ Tonight's last 40 decisions.
 
 One page, six tabs. The tab is kept in the address (`#requests`), so a refresh or a shared link
 lands in the same place.
+
+The header and the row of tabs are `AdminFrame`, drawn from the tap like the door's frame. The
+first tab's figures come with the page. Every other tab asks when it is first opened and is
+then remembered: going back to a tab already shown never waits.
 
 | Tab | File | What |
 |---|---|---|

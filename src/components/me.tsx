@@ -33,9 +33,11 @@ export function useMe(): MeState {
 
 /**
  * Runs `task` now and then every `ms`, but only while the tab is visible — a phone in a pocket
- * should not be polling. Runs again at once when the tab comes back.
+ * should not be polling. Runs again at once when the tab comes back. With `ms` of 0 it runs
+ * on arrival and on coming back, and not in between. It starts over when `subject` changes:
+ * a new question deserves an answer now, not at the next tick.
  */
-export function usePoll(task: () => void | Promise<void>, ms: number, enabled = true) {
+export function usePoll(task: () => void | Promise<void>, ms: number, enabled = true, subject?: string) {
   const saved = useRef(task);
   useEffect(() => {
     saved.current = task;
@@ -48,9 +50,12 @@ export function usePoll(task: () => void | Promise<void>, ms: number, enabled = 
     const start = () => {
       stop();
       run();
-      timer = setInterval(run, ms);
+      if (ms > 0) timer = setInterval(run, ms);
     };
-    const stop = () => timer && clearInterval(timer);
+    const stop = () => {
+      if (timer) clearInterval(timer);
+      timer = undefined;
+    };
     const onVisibility = () => (document.visibilityState === "visible" ? start() : stop());
 
     if (document.visibilityState === "visible") start();
@@ -59,5 +64,5 @@ export function usePoll(task: () => void | Promise<void>, ms: number, enabled = 
       stop();
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [ms, enabled]);
+  }, [ms, enabled, subject]);
 }

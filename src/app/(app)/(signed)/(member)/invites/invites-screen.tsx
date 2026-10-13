@@ -1,45 +1,52 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { Field, FormError } from "@/components/field";
-import { useMe, usePoll } from "@/components/me";
+import { RowsSkeleton } from "@/components/loading";
+import { useMe } from "@/components/me";
 import { NightPicker } from "@/components/night-picker";
 import { Qr } from "@/components/qr";
+import { refreshLive, useLive } from "@/components/use-live";
 import { useI18n } from "@/i18n/provider";
 import { api, isApiError } from "@/lib/api";
 import type { Invite, InviteLinkResponse, InvitesOverview } from "@/lib/types";
 
-export function InvitesScreen() {
+/** Invites on their way: the title is already true, so it is already there. */
+export function InvitesSkeleton() {
+  const { t } = useI18n();
+  return (
+    <div className="space-y-10">
+      <h1 className="title text-paper">{t.invites.title}</h1>
+      <RowsSkeleton rows={3} />
+    </div>
+  );
+}
+
+export function InvitesScreen({ first }: { first: InvitesOverview | null }) {
   const { t, fill } = useI18n();
   const { me, refresh } = useMe();
-  const [data, setData] = useState<InvitesOverview | null>(null);
-  const [failure, setFailure] = useState<string | null>(null);
+  const live = useLive<InvitesOverview>("/invites", { every: 8000, first });
+  const { data } = live;
+  const load = live.reload;
+  const [actionFailure, setActionFailure] = useState<string | null>(null);
   const [created, setCreated] = useState<Invite | null>(null);
-
-  const load = useCallback(async () => {
-    try {
-      setData(await api.get<InvitesOverview>("/invites"));
-      setFailure(null);
-    } catch (error) {
-      setFailure(isApiError(error) ? error.code : "server_error");
-    }
-  }, []);
-
-  usePoll(load, 8000);
+  const failure = actionFailure ?? live.failure;
 
   async function act(action: () => Promise<unknown>) {
-    setFailure(null);
+    setActionFailure(null);
     try {
       await action();
     } catch (error) {
-      setFailure(isApiError(error) ? error.code : "server_error");
+      setActionFailure(isApiError(error) ? error.code : "server_error");
     }
+    // An answered invite changes the pass screen too: have it ready before they get there.
+    refreshLive("/pass/tonight");
     await Promise.all([load(), refresh()]);
   }
 
   if (!data) {
-    return failure ? <FormError code={failure} /> : <p className="text-ink-soft">{t.common.loading}</p>;
+    return failure ? <FormError code={failure} /> : <InvitesSkeleton />;
   }
 
   return (

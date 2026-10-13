@@ -1,35 +1,20 @@
 "use client";
 
-import { useCallback, useState } from "react";
 import { FormError } from "@/components/field";
 import { LiveTicket } from "@/components/live-ticket";
-import { usePoll } from "@/components/me";
+import { TicketSkeleton } from "@/components/loading";
 import { SaveToPhone } from "@/components/save-to-phone";
+import { useLive } from "@/components/use-live";
 import { useI18n } from "@/i18n/provider";
-import { api, isApiError } from "@/lib/api";
 import type { TicketResponse } from "@/lib/types";
 
-export function TicketScreen({ token }: { token: string }) {
+export function TicketScreen({ token, first }: { token: string; first: TicketResponse | null }) {
   const { t } = useI18n();
-  const [data, setData] = useState<TicketResponse | null>(null);
-  const [missing, setMissing] = useState(false);
-  const [failure, setFailure] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    try {
-      setData(await api.get<TicketResponse>(`/tickets/${encodeURIComponent(token)}`));
-      setFailure(null);
-    } catch (error) {
-      if (isApiError(error) && error.status === 404) setMissing(true);
-      else setFailure(isApiError(error) ? error.code : "server_error");
-    }
-  }, [token]);
-
-  usePoll(load, 6000, !missing);
+  const { data, failure, missing } = useLive<TicketResponse>(`/tickets/${encodeURIComponent(token)}`, { every: 6000, first });
 
   if (missing) {
     return (
-      <div className="paper rise w-full p-6">
+      <div className="paper w-full p-6">
         <h1 className="text-3xl">{t.ticket.notFoundTitle}</h1>
         <p className="mt-3 text-paper-soft">{t.ticket.notFoundBody}</p>
       </div>
@@ -42,7 +27,7 @@ export function TicketScreen({ token }: { token: string }) {
         <FormError code={failure} />
       </div>
     ) : (
-      <div className="ticket h-[30rem] w-full max-w-[22rem] animate-pulse opacity-40" aria-label={t.common.loading} />
+      <TicketSkeleton />
     );
   }
 

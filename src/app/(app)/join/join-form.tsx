@@ -1,18 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { Field, FormError } from "@/components/field";
 import { PhotoPicker } from "@/components/photo-picker";
 import { useI18n } from "@/i18n/provider";
 import { api, isApiError } from "@/lib/api";
+import { openFresh } from "@/lib/fresh-page";
 import type { Me } from "@/lib/types";
 import { venue } from "@/venue";
 
 export function JoinForm() {
   const { t, fill, lang, error: errorText } = useI18n();
-  const router = useRouter();
   const [photo, setPhoto] = useState<string | null>(null);
   const [adult, setAdult] = useState(false);
   const [consent, setConsent] = useState(false);
@@ -38,8 +37,8 @@ export function JoinForm() {
         adult,
         consent,
       });
-      router.push("/pass");
-      router.refresh();
+      // A whole new page: nothing held for an earlier account on this phone survives it.
+      openFresh("/pass");
     } catch (error) {
       if (isApiError(error)) {
         setFields(error.fields);

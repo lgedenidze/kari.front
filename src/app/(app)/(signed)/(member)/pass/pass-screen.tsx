@@ -1,48 +1,50 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { Field, FormError } from "@/components/field";
 import { LiveTicket } from "@/components/live-ticket";
+import { TicketSkeleton } from "@/components/loading";
 import { useMe, usePoll } from "@/components/me";
 import { SaveToPhone } from "@/components/save-to-phone";
 import { Stamp } from "@/components/stamp";
 import { StubCode, TicketCard } from "@/components/ticket";
 import { PassIcon } from "@/components/icons";
+import { useLive } from "@/components/use-live";
 import { useI18n } from "@/i18n/provider";
 import { api, isApiError } from "@/lib/api";
 import type { Me, TonightResponse } from "@/lib/types";
 
-export function PassScreen() {
+/** The pass on its way: the one placeholder this screen has, here and in loading.tsx. */
+export function PassSkeleton() {
+  return (
+    <div className="flex flex-1 flex-col items-center gap-6">
+      <TicketSkeleton />
+    </div>
+  );
+}
+
+export function PassScreen({ first }: { first: TonightResponse | null }) {
   const { t, fill, night } = useI18n();
   const { me, setMe, refresh } = useMe();
-  const [data, setData] = useState<TonightResponse | null>(null);
-  const [failure, setFailure] = useState<string | null>(null);
+  // Asked again every few seconds: this is how the phone learns the door let them in. A failed
+  // poll never wipes a pass that is already on screen — the last answer stays.
+  const live = useLive<TonightResponse>("/pass/tonight", { every: 4000, first });
+  const { data } = live;
+  const [claimFailure, setClaimFailure] = useState<string | null>(null);
   const [claiming, setClaiming] = useState(false);
+  const failure = claimFailure ?? live.failure;
 
-  const load = useCallback(async () => {
-    try {
-      setData(await api.get<TonightResponse>("/pass/tonight"));
-      setFailure(null);
-    } catch (error) {
-      // A failed poll must not wipe a pass that is already on screen.
-      setFailure(isApiError(error) ? error.code : "server_error");
-    }
-  }, []);
-
-  // Poll: this is how the phone learns the door let them in, or that the bar said yes.
-  usePoll(() => {
-    void load();
-    if (me.status === "pending") void refresh();
-  }, 4000);
+  // While a request is in review, ask about the account too: that is how the bar's yes arrives.
+  usePoll(refresh, 4000, me.status === "pending");
 
   async function claim() {
     setClaiming(true);
-    setFailure(null);
+    setClaimFailure(null);
     try {
-      setData(await api.post<TonightResponse>("/pass/claim"));
+      live.set(await api.post<TonightResponse>("/pass/claim"));
     } catch (error) {
-      setFailure(isApiError(error) ? error.code : "server_error");
+      setClaimFailure(isApiError(error) ? error.code : "server_error");
     }
     setClaiming(false);
   }
@@ -51,12 +53,12 @@ export function PassScreen() {
     return failure ? (
       <div className="paper p-5">
         <FormError code={failure} />
-        <button type="button" className="btn btn-ink mt-4 w-full" onClick={() => void load()}>
+        <button type="button" className="btn btn-ink mt-4 w-full" onClick={() => void live.reload()}>
           {t.common.retry}
         </button>
       </div>
     ) : (
-      <div className="ticket h-[30rem] w-full animate-pulse opacity-40" aria-label={t.common.loading} />
+      <PassSkeleton />
     );
   }
 
@@ -91,7 +93,6 @@ export function PassScreen() {
         // the stub — with one thing missing: the code, and the button that prints it. A first
         // visit shows what they are about to hold, not a paragraph about it.
         <TicketCard
-          className="rise"
           nightLabel={nightLabel}
           firstName={me.firstName}
           lastName={me.lastName}
@@ -116,7 +117,6 @@ export function PassScreen() {
       ) : (
         // Closed tonight: the same ticket, with nothing to print.
         <TicketCard
-          className="rise"
           nightLabel={nightLabel}
           firstName={me.firstName}
           lastName={me.lastName}
@@ -176,7 +176,7 @@ export function PassScreen() {
 
 function StatusCard({ title, body, stamp }: { title: string; body: string; stamp?: React.ReactNode }) {
   return (
-    <div className="paper rise w-full p-6">
+    <div className="paper w-full p-6">
       {/* The stamp sits beside the title, whole — never cropped by the card's corner. */}
       <div className="flex items-start justify-between gap-2">
         <h1 className="min-w-0 text-[clamp(1.9rem,8.6vw,2.5rem)]">{title}</h1>
@@ -220,7 +220,7 @@ function PendingCard({ me, onChanged }: { me: Me; onChanged: (me: Me) => void })
   ];
 
   return (
-    <div className="paper rise w-full p-6">
+    <div className="paper w-full p-6">
       <div className="flex items-start justify-between gap-2">
         <h1 className="min-w-0 text-[clamp(1.9rem,8.6vw,2.5rem)]">{t.pass.pendingTitle}</h1>
         <div className="-mr-2 -mt-2 flex-none">
@@ -312,7 +312,8 @@ function ApplyCard({
   }
 
   return (
-    <form onSubmit={apply} noValidate className="paper rise w-full space-y-4 p-6">
+    // Opened by a tap ("change the link") it rises; as the screen's first content it does not.
+    <form onSubmit={apply} noValidate className={`paper w-full space-y-4 p-6 ${onCancel ? "rise" : ""}`}>
       <div>
         <h1 className="text-[clamp(1.9rem,8.6vw,2.5rem)]">{title}</h1>
         <p className="mt-3 text-paper-soft">{body}</p>

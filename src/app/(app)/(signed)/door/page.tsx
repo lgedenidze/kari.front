@@ -1,6 +1,7 @@
 import { getDict } from "@/i18n";
 import { getLang } from "@/i18n/server";
-import { requireMe } from "@/lib/server-api";
+import { firstAnswer, requireMe } from "@/lib/server-api";
+import type { DoorTonight } from "@/lib/types";
 import { DoorScreen } from "./door-screen";
 
 export async function generateMetadata() {
@@ -8,6 +9,6 @@ export async function generateMetadata() {
 }
 
 export default async function Page() {
-  await requireMe("/door", ["staff", "admin"]);
-  return <DoorScreen />;
+  const [, first] = await Promise.all([requireMe("/door", ["staff", "admin"]), firstAnswer<DoorTonight>("/door/tonight")]);
+  return <DoorScreen first={first} />;
 }
