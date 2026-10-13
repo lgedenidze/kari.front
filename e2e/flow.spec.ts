@@ -230,3 +230,53 @@ test("the public pages are indexable, in both languages", async ({ browser }) =>
   const robots = await (await page.request.get("/robots.txt")).text();
   expect(robots).toContain("Disallow: /admin");
 });
+
+test("an admin names a night, and members see it by name", async ({ browser }) => {
+  const title = `Opening ${run}`;
+
+  // Six nights from now, as the API counts nights.
+  const admin = await signIn(browser, seed.AdminPhone, seed.AdminPassword);
+  const week = (await (await admin.request.get("/api/public/venue")).json()).week as { night: string }[];
+  const date = week[6].night;
+
+  // The admin adds the night from the back office: pick a date, give it a name, save.
+  await admin.goto("/admin#nights");
+  await admin.getByRole("button", { name: "Add a night" }).click();
+  await admin.getByLabel("Date").fill(date);
+  await admin.getByLabel("Name of the night").fill(title);
+  await admin.getByLabel("Note for guests").fill("Doors at ten");
+  await admin.getByRole("button", { name: "Save changes" }).click();
+
+  const named = admin.locator("#special-nights + ul li", { hasText: title });
+  await expect(named).toBeVisible();
+  await expect(named).toContainText("Doors at ten");
+
+  // A member who can invite sees that night by name in the invite calendar.
+  const member = await (await english(browser)).newPage();
+  const me = await (
+    await member.request.post("/api/auth/register", {
+      data: {
+        firstName: "Lika", lastName: `Named${run}`, phone: newPhone(), password: PASSWORD,
+        facebookUrl: `lika.named.${run}`, lang: "en", adult: true, consent: true,
+      },
+    })
+  ).json();
+  expect((await admin.request.post(`/api/admin/users/${me.id}/review`, { data: { decision: "approve" } })).ok()).toBe(true);
+  expect((await admin.request.patch(`/api/admin/users/${me.id}`, { data: { inviteMode: "on" } })).ok()).toBe(true);
+
+  await member.goto("/invites");
+  const special = member.getByRole("button", { name: new RegExp(title) }).last();
+  await expect(special).toBeVisible();
+  await special.click();
+  await expect(member.locator("[aria-live='polite']", { hasText: title })).toContainText("Doors at ten");
+
+  // The admin edits it, then removes it: the night goes back to the plain schedule.
+  // (Once the form is open the name is a field's value, not text, so the card is found by
+  // its form rather than by its title.)
+  await named.getByRole("button", { name: "Edit" }).click();
+  const editor = admin.locator("#special-nights + ul form");
+  await expect(editor.getByLabel("Name of the night")).toHaveValue(title);
+  await editor.getByRole("button", { name: "Back to the schedule" }).click();
+  await expect(admin.locator("#special-nights + ul li", { hasText: title })).toHaveCount(0);
+  await expect(editor).toHaveCount(0);
+});

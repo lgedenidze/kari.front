@@ -1,0 +1,99 @@
+# Door and back office
+
+The two screens the bar's own people use. They are opposites: the door is used standing up, in
+the dark, in seconds; the back office sitting down, in daylight, for minutes.
+
+## The door — `/door`
+
+`(app)/door/door-screen.tsx`, `scanner.tsx`. Staff and admins only.
+
+### Layout
+
+- Three counters: inside (of capacity), passes tonight, turned away. Polled every 6 seconds.
+- Three tabs: **Scan**, **Find**, **Log**.
+- The dock at the bottom.
+
+### Scanning
+
+`scanner.tsx` opens the rear camera and reads QR codes.
+
+- Chrome on Android reads them natively (`BarcodeDetector`). Everywhere else, frames are decoded
+  by `jsqr`, loaded only when needed, on a frame scaled to 640px.
+- The same code held in front of the camera is reported once every 4 seconds, not seven times a second.
+- The camera keeps running while a result is up but stops reading, so it is ready at once.
+- A blocked or missing camera says so, and points to Find.
+- **The camera needs https.** On plain http (other than localhost) browsers refuse.
+
+A read token is posted to `POST /api/door/scan`. The phone vibrates: once for go, twice otherwise.
+
+### The result sheet
+
+A full-screen sheet over everything, including the dock.
+
+1. A band in the verdict's tone — go, wait or stop — with the verdict in words and a hint.
+2. Warnings: same name as a suspended person; at capacity; marked closed tonight.
+3. The person: photo, name large, status, the pass's short code, nights so far; the personal
+   number in a box marked "check this against their ID"; who invited them; last visit; times
+   turned away before; staff notes; a button to open their Facebook profile.
+4. Two large buttons: **Deny** and **Admit**. Deny asks for a reason from six, in one more tap.
+
+The verdict is advice. Staff may admit against a red band; the log records what they saw.
+
+After a decision a stamp — ADMITTED or DENIED — fills the screen for a beat, then the scanner
+is back. Escape closes the sheet.
+
+### Find
+
+For a dead phone. Type two or more characters: a name, a phone number, a personal number, or
+the short code printed on a pass. Tapping a result opens the same sheet, marked "by hand".
+
+### Ticket at the door
+
+For someone with no pass. First name, last name, optional personal number. They are admitted
+at once, and the screen shows a QR of their own ticket link (`/t/{token}`): they photograph it
+and hold a ticket for coming back in.
+
+### Log
+
+Tonight's last 40 decisions.
+
+## The back office — `/admin`
+
+`(app)/admin/`. Admins only. A light "desk" theme, set on the page root with `--ground`.
+
+One page, six tabs. The tab is kept in the address (`#requests`), so a refresh or a shared link
+lands in the same place.
+
+| Tab | File | What |
+|---|---|---|
+| Tonight | `overview.tsx` | Requests waiting; inside, passes, turned away, members; the last 14 nights as a table. |
+| Requests | `requests.tsx` | The review queue, oldest first. Open the Facebook profile, add a note, approve or reject. |
+| People | `people.tsx` | Search and filter. A person's page: status, role, inviting, quota, notes for the door, password reset, door history. |
+| Nights | `nights.tsx` | "Add a night" for any date; named and changed nights by name; the next three weeks. |
+| Door log | `log.tsx` | Every decision on one night. |
+| Settings | `settings.tsx` | Opening days, door hours, the cutoff, capacity, invite defaults. |
+
+### Nights
+
+Two jobs, kept apart on purpose:
+
+- **Add a night** — pick any date from tonight on, give it a name, a note, a capacity, or close
+  it. Named nights show to guests by name on the pass, the invite calendar and the ticket.
+- **The next three weeks** — the plain schedule, where any single night can be edited.
+
+A night that has been named or changed is listed at the top, even when it is months ahead.
+"Back to the schedule" removes the change.
+
+### A password reset
+
+There is no SMS or email. The admin presses Reset password and reads the guest the one-time
+password that appears. It is shown once.
+
+## Watch out
+
+- **Do not make the result sheet smaller or dismissible by a stray tap.** A decision at the
+  door must be deliberate.
+- **Nothing on the door screen may depend on hover.** It is used on a phone.
+- **The admin tabs poll gently** (10–60 s) and stop polling while a form is open, so typing is
+  never overwritten.
+- **Counters come from the API.** Do not count entries in the browser.

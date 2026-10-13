@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { errorText, fill, formatDate, formatDateTime, formatNight, formatTime, getDict } from "./index";
 import { en } from "./en";
 import { ka } from "./ka";
@@ -9,6 +9,27 @@ describe("dates", () => {
     expect(formatNight("2026-10-16", "ka")).toBe("პარ, 16 ოქტ");
     expect(formatNight("2026-10-16", "ka", "long")).toBe("პარასკევი, 16 ოქტომბერი");
     expect(formatNight("2026-10-18", "ka")).toBe("კვი, 18 ოქტ");
+  });
+
+  // Regression test for BUG-0001. Node has Georgian date data and Chrome does not, so the bug
+  // cannot be seen by output alone here: instead, asking Intl for Georgian at all is the failure.
+  it("never asks the runtime for Georgian date data", () => {
+    const RealFormat = Intl.DateTimeFormat;
+    const spy = vi.spyOn(Intl, "DateTimeFormat").mockImplementation(function (
+      locales?: Intl.LocalesArgument,
+      options?: Intl.DateTimeFormatOptions,
+    ) {
+      if (String(locales).toLowerCase().startsWith("ka")) throw new Error("Georgian was requested from Intl");
+      return new RealFormat(locales, options);
+    } as typeof Intl.DateTimeFormat);
+
+    try {
+      expect(formatNight("2026-10-16", "ka", "long")).toBe("პარასკევი, 16 ოქტომბერი");
+      expect(formatDateTime("2026-10-16T19:41:00Z", "ka")).toBe("16 ოქტ, 23:41");
+      expect(formatDate("2026-10-16T19:41:00Z", "ka")).toBe("16 ოქტ 2026");
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   it("prints a night in English", () => {
