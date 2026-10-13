@@ -4,7 +4,8 @@ import { join } from "node:path";
 import { venue, type Lang } from "@/venue";
 import { buildPkpass, readCertificate, readSigner, type PassSigner } from "./pkpass";
 import type { Ticket } from "./types";
-import { walletTicket } from "./wallet-ticket";
+import { walletStrip } from "./wallet-strip";
+import { ticketKind, walletTicket } from "./wallet-ticket";
 
 // "Add to Apple Wallet". A ticket is handed over as a .pkpass, signed with the bar's Pass
 // Type ID certificate from Apple.
@@ -26,16 +27,17 @@ export function walletReady(): boolean {
 // added here when the .p12 did not bring it along.
 const WWDR = "Apple Worldwide Developer Relations Certification Authority";
 
-// Each path is written out in full: the build follows these to know which files must ship
-// with the function (next.config.ts names the folder as well).
-const PICTURES = {
-  "icon.png": "assets/wallet/icon.png",
-  "icon@2x.png": "assets/wallet/icon@2x.png",
-  "icon@3x.png": "assets/wallet/icon@3x.png",
-  "logo.png": "assets/wallet/logo.png",
-  "logo@2x.png": "assets/wallet/logo@2x.png",
-  "logo@3x.png": "assets/wallet/logo@3x.png",
-} as const;
+// Each file is read by a path written out in full, one call each: the build follows these
+// to know which files must ship with the function, and a path put together at run time
+// makes it ship the whole project instead (next.config.ts names the folder as well).
+const readPictures = async (): Promise<Record<string, Buffer>> => ({
+  "icon.png": await readFile(join(process.cwd(), "assets/wallet/icon.png")),
+  "icon@2x.png": await readFile(join(process.cwd(), "assets/wallet/icon@2x.png")),
+  "icon@3x.png": await readFile(join(process.cwd(), "assets/wallet/icon@3x.png")),
+  "logo.png": await readFile(join(process.cwd(), "assets/wallet/logo.png")),
+  "logo@2x.png": await readFile(join(process.cwd(), "assets/wallet/logo@2x.png")),
+  "logo@3x.png": await readFile(join(process.cwd(), "assets/wallet/logo@3x.png")),
+});
 
 let ready: Promise<{ signer: PassSigner; pictures: Record<string, Buffer> }> | null = null;
 
@@ -46,9 +48,7 @@ function materials() {
     if (!signer.chain.some((link) => link.subject.getField("CN")?.value === WWDR)) {
       signer.chain.push(readCertificate(await readFile(join(process.cwd(), "assets/wallet/AppleWWDRCAG4.cer"))));
     }
-    const names = Object.keys(PICTURES) as (keyof typeof PICTURES)[];
-    const files = await Promise.all(names.map((name) => readFile(join(process.cwd(), PICTURES[name]))));
-    return { signer, pictures: Object.fromEntries(names.map((name, index) => [name, files[index]])) };
+    return { signer, pictures: await readPictures() };
   })();
   // A certificate that will not open is tried again on the next request, not remembered.
   ready.catch(() => {
@@ -57,13 +57,26 @@ function materials() {
   return ready;
 }
 
-/** The ticket as a Wallet pass. `link` is the same address the downloaded picture's QR carries. */
-export async function walletPass({ ticket, link, lang }: { ticket: Ticket; link: string; lang: Lang }): Promise<Response> {
+/** The ticket as a Wallet pass. `live` is the live ticket's own address; `doors`, when they are open that night. */
+export async function walletPass({
+  ticket,
+  live,
+  lang,
+  doors,
+}: {
+  ticket: Ticket;
+  live: string;
+  lang: Lang;
+  doors?: { open: string; close: string };
+}): Promise<Response> {
   if (!walletReady()) return new Response(null, { status: 404 });
   let pass: Buffer;
   try {
-    const { signer, pictures } = await materials();
-    pass = buildPkpass({ pass: walletTicket({ ticket, link, lang }), pictures, signer });
+    const [{ signer, pictures }, strip] = await Promise.all([
+      materials(),
+      walletStrip({ kind: ticketKind(ticket, lang), firstName: ticket.firstName, lastName: ticket.lastName }),
+    ]);
+    pass = buildPkpass({ pass: walletTicket({ ticket, live, lang, doors }), pictures: { ...pictures, ...strip }, signer });
   } catch (error) {
     console.error("wallet pass", error);
     return new Response(null, { status: 500 });

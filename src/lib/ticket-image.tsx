@@ -1,10 +1,9 @@
 import "server-only";
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
 import { ImageResponse } from "next/og";
 import QRCode from "qrcode";
 import { fill, formatNight, getDict } from "@/i18n";
 import { venue, type Lang } from "@/venue";
+import { ticketFonts } from "./ticket-fonts";
 import type { Ticket } from "./types";
 
 // A ticket as a picture, for the "download" button: something to keep in Photos, send to a
@@ -17,16 +16,6 @@ import type { Ticket } from "./types";
 // picture can never carry it — and must not carry the key that makes it. The QR here is the
 // ticket's own address. Any camera that reads it opens the live ticket; the door's scanner
 // reads it too, and looks the guest up by the short code (lib/saved-ticket.ts).
-
-// Satori, which draws this, needs static fonts: no variable axes, no WOFF2. These three are
-// the same family the app uses, cut at fixed weights (assets/fonts, SIL Open Font License).
-// Each path is written out in full on purpose: the build follows these to know which files
-// must ship with the function (next.config.ts names the folder as well).
-const [condensed, regular, bold] = await Promise.all([
-  readFile(join(process.cwd(), "assets/fonts/NotoSansGeorgian-CondensedExtraBold.ttf")),
-  readFile(join(process.cwd(), "assets/fonts/NotoSansGeorgian-Regular.ttf")),
-  readFile(join(process.cwd(), "assets/fonts/NotoSansGeorgian-Bold.ttf")),
-]);
 
 // The app's own colours (app/globals.css). A picture cannot read CSS variables.
 const INK = "#14235e";
@@ -174,11 +163,7 @@ export function ticketImage({ ticket, link, lang }: { ticket: Ticket; link: stri
     {
       width: WIDTH,
       height: HEIGHT,
-      fonts: [
-        { name: "Display", data: condensed, weight: 800, style: "normal" },
-        { name: "Text", data: regular, weight: 400, style: "normal" },
-        { name: "Text", data: bold, weight: 700, style: "normal" },
-      ],
+      fonts: ticketFonts,
       headers: {
         // One person's ticket: never a shared cache's business.
         "Cache-Control": "private, max-age=60",

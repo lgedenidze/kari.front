@@ -159,6 +159,9 @@ test("an iPhone is offered Apple Wallet exactly when a pass can be made, and no 
   expect(file.headers()["cache-control"]).toContain("private");
   const body = await file.body();
   expect(body.subarray(0, 2).toString("latin1")).toBe("PK");
-  // Its code is the saved ticket's: this ticket's own address with the short code on the end.
-  expect(body.toString("latin1")).toContain(`/pass?c=${shortCode}`);
+  // Its code is the ticket's short code and nothing else: large, clean squares, which the
+  // door reads as a lookup. The pass's own key is nowhere in it.
+  expect(body.toString("latin1")).toContain(`"message":"${shortCode}"`);
+  // The band is drawn for this pass: the holder's name is on it.
+  expect(body.toString("latin1")).toContain("strip@3x.png");
 });

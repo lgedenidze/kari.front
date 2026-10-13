@@ -59,9 +59,12 @@ src/
                          profile-link (the name of the network a guest's profile is on),
                          pass-code, scan-presence, web-manifest, types, photo,
                          pkpass (builds and signs a Wallet pass file), wallet-ticket (what a ticket
-                         says in Wallet), wallet-pass (the certificate, and the answer to the phone)
+                         says in Wallet), wallet-strip (the paper ticket across the pass, drawn for
+                         each one), wallet-pass (the certificate, and the answer to the phone),
+                         ticket-fonts (the typeface of every picture the server draws)
 assets/fonts/            static fonts for the ticket picture (the app itself uses next/font)
-assets/wallet/           a Wallet pass's icon and logo, and Apple's public intermediate certificate
+assets/wallet/           a Wallet pass's icon, logo and stamp (e2e/wallet-art.mjs draws them), and
+                         Apple's public intermediate certificate
 e2e/                     flow.spec.ts (the journeys), loading.spec.ts (how a screen arrives, on a slowed
                          server), ticket-image.spec.ts; phone-audit.mjs, warm-tabs.mjs, ticket-image.mjs
 ```

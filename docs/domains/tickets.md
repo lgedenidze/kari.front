@@ -133,19 +133,43 @@ plain link to the ticket as a `.pkpass`: the phone answers that file with its ow
 sheet. Each kind of ticket has its address, beside its picture: `/pass/wallet.pkpass`,
 `/i/{code}/wallet.pkpass`, `/t/{token}/wallet.pkpass`, under the same rules as the page.
 
-- **What the pass is** (`lib/wallet-ticket.ts`): a Wallet event ticket in the app's paper and
-  ink. The night at the top, the name large with the kind of ticket above it, a named
-  night's name, the short code, the hour it is valid until. On its back: the link to the
-  live ticket, and the Wox credit. It turns grey by itself when its night ends
-  (`expirationDate`, from the API's `endsAt`) and Wallet will not share it on
-  (`sharingProhibited`): it has a name on it.
-- **What its code is.** The same as the picture's, below, for the same reason: the
-  ticket's own address with the short code. The door reads it as a lookup, logged
-  "by hand". A pass in Wallet is never updated after it is added; a ticket the bar
-  cancels is caught at the door by that lookup, not by Wallet.
+- **What Wallet allows.** It draws every word of a pass itself, in its own typeface, and
+  puts each kind of field where it likes. It draws the code too: black on a white tile, at
+  the foot of the pass, at its own size, with whatever room is left empty above it. None of
+  that can be styled. The app's look reaches the pass through three things only: the
+  colours, the logo picture and the band picture (the "strip", 375 by 98 points).
+- **What the pass is** (`lib/wallet-ticket.ts`): the app's own screen. Ink for a ground; the
+  wordmark and the date at the top; then the band — a paper ticket with notches, the
+  holder's name in the headline cut on two lines, the kind of ticket over it, and the
+  maker's stamp; then the stub — when the doors are open (or, for a ticket issued at the
+  door, the hour it runs out) and "powered by wox.ge"; a named night's name has a row to
+  itself above the stub. On its back: the name in words, the link to the live ticket, and
+  the Wox link. It turns grey when its night ends (`expirationDate`) and Wallet will not
+  share it on (`sharingProhibited`).
+- **The band is drawn for each pass** (`lib/wallet-strip.tsx`, with the fonts of the
+  downloaded picture). The name is not left to Wallet's own name field: that is set in
+  Wallet's type and runs across whatever is behind it — a first version had the name over
+  the stamp, and the owner called it what it was. Here the name is sized by its longer half
+  so it always ends before the stamp. Because it is a picture, the name is also in the
+  pass's `description`, for VoiceOver, and on the back.
+- **What its code is.** The ticket's short code and nothing else — not the ticket's address,
+  as in the picture below. Six characters make a code of 21 by 21 large squares; the
+  address made a dense one, and the owner found it ugly. The door reads either form
+  (`lib/saved-ticket.ts`) as the same lookup, logged "by hand", and opens only the pass
+  that carries that very code.
+- **The code in Wallet never changes, and that is handled at the door.** A live ticket
+  shows a new code every thirty seconds; Wallet holds one code and has no way to turn it
+  over (a pass can be re-sent by push, in minutes, not seconds). So a Wallet code admits
+  nobody by itself: the scanner opens the person — photo, name — marked "by hand", staff
+  decide, and a second showing of the same code says "already in". A ticket the bar
+  cancels is caught by that lookup, not by Wallet.
+- **"Added to Wallet".** A page cannot ask Wallet what is in it; only an app can. So the
+  phone remembers, for each ticket, that its badge was tapped (`localStorage`), and shows
+  "Added to Wallet" with an "Add again" link in the badge's place — the tap may have been
+  called off, and a pass already in Wallet is replaced by adding it again.
 - **How the file is made** (`lib/pkpass.ts`, no knowledge of tickets, tested with a
-  certificate made on the spot): a zip of `pass.json`, the icon and logo
-  (`assets/wallet/`, drawn from the app's mark by `e2e/wallet-icons.mjs`), a manifest of
+  certificate made on the spot): a zip of `pass.json`, the icon and logo (`assets/wallet/`,
+  drawn by `e2e/wallet-art.mjs`, which also draws the stamp), the band, a manifest of
   SHA-1 sums, and a detached PKCS #7 signature of that manifest. The Pass Type ID and the
   Team ID are read off the certificate, so they cannot disagree with it.
 - **The certificate** is a secret from the bar's Apple Developer account. It reaches the
@@ -164,8 +188,9 @@ sheet. Each kind of ticket has its address, beside its picture: `/pass/wallet.pk
   starts handing out passes an iPhone refuses.
 - **What has been checked, and what has not.** A pass fetched from the live site verifies
   with `openssl smime -verify` all the way to Apple's root certificate, and its manifest
-  matches its files. How Wallet lays the fields out has only been reasoned from Apple's
-  documentation: it needs looking at on a real iPhone.
+  matches its files. The owner looked at the first design on his iPhone the same day and
+  asked for this one. **A pass already in Wallet does not change by itself:** to see a new
+  design, delete the pass and add it again.
 
 ### Download ticket
 

@@ -150,15 +150,18 @@ export function DoorScreen({ first }: { first: DoorTonight | null }) {
     setChecking(true);
     navigator.vibrate?.(35);
     try {
-      // A ticket saved as a picture: its QR is not a pass code, but it names the pass. Look
-      // the guest up by that, exactly as if staff had typed the short code into Find.
+      // A ticket saved as a picture or kept in an iPhone's Wallet: its QR is not a pass code,
+      // but it names the pass. Look the guest up by that, exactly as if staff had typed the
+      // short code into Find. The search matches names as well, so only the pass that
+      // carries this very code is opened.
       const saved = savedTicketCode(token);
       if (saved) {
         const hits = await api.get<SearchHit[]>(`/door/search?q=${encodeURIComponent(saved)}`);
-        const hit = hits.find((found) => found.passId);
-        if (hit) {
+        for (const hit of hits.filter((found) => found.passId).slice(0, 5)) {
+          const found = await api.get<ScanResult>(`/door/pass/${hit.passId}`);
+          if (found.pass?.shortCode !== saved) continue;
           navigator.vibrate?.([90, 70, 90]);
-          setResult(await api.get<ScanResult>(`/door/pass/${hit.passId}`));
+          setResult(found);
           setChecking(false);
           busy.current = false;
           return;

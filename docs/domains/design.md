@@ -103,7 +103,9 @@ the mark keeps still: it never pulses.
 8. **Meaning never rests on colour alone.** A verdict band has a word; a chip has a label.
 9. **Icons are drawn here, in the app's vocabulary.** Do not add an icon library. The one
    exception is the "Add to Apple Wallet" badge, which is Apple's and is never restyled:
-   black, Apple's proportions, in English, with clear space round it.
+   black, Apple's proportions, in English, with clear space round it. A Wallet pass itself
+   is the app's screen in small — ink ground, a paper ticket across it, the stamp — as far
+   as Wallet lets a pass be designed; see tickets.md, "Add to Apple Wallet".
 10. **Nothing that wraps a screen may keep a transform.** A transform — even one that moves
     nothing — makes every `position: fixed` sheet inside it sit in the screen instead of the
     window, with the dock on top

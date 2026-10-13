@@ -13,6 +13,15 @@ describe("the QR on a saved ticket", () => {
     expect(savedTicketCode("  https://kari-kappa.vercel.app/pass/?c=1AD0H6  ")).toBe("1AD0H6");
   });
 
+  it("takes the short code on its own, as a pass in Wallet carries it", () => {
+    expect(savedTicketCode("9MJQ6R")).toBe("9MJQ6R");
+    expect(savedTicketCode(" 9MJQ6R\n")).toBe("9MJQ6R");
+    // Only as the codes are printed: capitals and digits, four to twelve of them.
+    expect(savedTicketCode("9mjq6r")).toBeNull();
+    expect(savedTicketCode("ABC")).toBeNull();
+    expect(savedTicketCode("A CODE")).toBeNull();
+  });
+
   it("is not fooled by a live pass code, another page, or anything else", () => {
     expect(savedTicketCode("K1.0123456789ABCDEF.01234567")).toBeNull();
     expect(savedTicketCode("https://nisli.ge/pass")).toBeNull();

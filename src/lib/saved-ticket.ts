@@ -14,8 +14,13 @@ export function savedTicketLink(origin: string, path: string, shortCode: string)
 const TICKET_PATH = /^\/(pass|i\/[^/]+|t\/[^/]+)\/?$/;
 const SHORT_CODE = /^[0-9A-Z]{4,12}$/;
 
+// A pass in an iPhone's Wallet carries the short code and nothing else: six characters make
+// a code of large, clean squares (lib/wallet-ticket.ts). Only exactly that — capitals and
+// digits, as the codes are printed — so that a word on somebody's sticker is not taken for one.
+
 /** The short code inside a saved ticket's QR, or null when the text is anything else. */
 export function savedTicketCode(text: string): string | null {
+  if (SHORT_CODE.test(text.trim())) return text.trim();
   let url: URL;
   try {
     url = new URL(text.trim());

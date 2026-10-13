@@ -56,6 +56,30 @@ const isStandalone = () =>
 // Which phone this is never changes while the page is open.
 const never = () => () => {};
 
+// A page cannot ask Wallet what is in it; only an app can. So this phone remembers, for each
+// ticket, that its badge was tapped, and stops offering the badge as if nothing had happened.
+// The way to add it again stays, because the tap may have been called off.
+const walletListeners = new Set<() => void>();
+const subscribeToWallet = (listener: () => void) => {
+  walletListeners.add(listener);
+  return () => walletListeners.delete(listener);
+};
+function wasAdded(key: string): boolean {
+  try {
+    return window.localStorage.getItem(key) === "1";
+  } catch {
+    return false;
+  }
+}
+function rememberAdded(key: string) {
+  try {
+    window.localStorage.setItem(key, "1");
+  } catch {
+    // Private browsing: the badge is simply offered again next time.
+  }
+  walletListeners.forEach((listener) => listener());
+}
+
 function isIos(): boolean {
   // iPadOS reports itself as a Mac; a Mac with a touch screen is an iPad.
   return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
@@ -84,6 +108,9 @@ export function SaveToPhone({
   const { t } = useI18n();
   // Known only in the browser, so it is read after the page has arrived, never guessed on the server.
   const toWallet = useSyncExternalStore(never, isIos, () => false) && wallet;
+  // The file name carries the ticket's short code, so each ticket is remembered by itself.
+  const walletKey = `kari.wallet.${fileName}`;
+  const inWallet = useSyncExternalStore(subscribeToWallet, () => wasAdded(walletKey), () => false);
   const canPrompt = useSyncExternalStore(subscribeToPrompt, () => installPrompt !== null, () => false);
   const standalone = useSyncExternalStore(subscribeToStandalone, isStandalone, () => false);
   const [help, setHelp] = useState<"ios" | "other" | null>(null);
@@ -172,14 +199,32 @@ export function SaveToPhone({
     <>
       <div className="w-full max-w-[22rem] space-y-2.5 text-center">
         {/* A plain link: the phone itself answers a pass with its own "Add" sheet. */}
-        {toWallet && (
-          <a href={toWallet} aria-label={t.ticket.wallet} className="mx-auto mb-4 block w-fit rounded-[0.55rem] active:opacity-80">
-            <AppleWalletBadge />
-          </a>
-        )}
+        {toWallet &&
+          (inWallet ? (
+            <p className="flex min-h-11 flex-wrap items-center justify-center gap-x-3 pb-1 text-sm font-semibold text-ink-soft">
+              <span className="flex items-center gap-1.5 text-go">
+                <svg viewBox="0 0 12 12" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="m2.5 6.4 2.3 2.3 4.7-5" />
+                </svg>
+                {t.ticket.walletAdded}
+              </span>
+              <a href={toWallet} className="link">
+                {t.ticket.walletAgain}
+              </a>
+            </p>
+          ) : (
+            <a
+              href={toWallet}
+              aria-label={t.ticket.wallet}
+              className="mx-auto mb-4 block w-fit rounded-[0.55rem] active:opacity-80"
+              onClick={() => rememberAdded(walletKey)}
+            >
+              <AppleWalletBadge />
+            </a>
+          ))}
         <button
           type="button"
-          className={`btn w-full ${toWallet ? "btn-line text-paper-light" : "btn-paper"}`}
+          className={`btn w-full ${toWallet && !inWallet ? "btn-line text-paper-light" : "btn-paper"}`}
           onPointerDown={warm}
           onClick={download}
           disabled={making}
