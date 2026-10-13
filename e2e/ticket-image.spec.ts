@@ -23,13 +23,23 @@ async function signedIn(browser: Browser, phone: string, password: string): Prom
 
 /** A member approved by the bar, holding tonight's pass — or null when the bar is closed tonight. */
 async function memberWithPass(browser: Browser): Promise<{ page: Page; shortCode: string } | null> {
+  const { page } = await member(browser);
+  const claimed = await page.request.post("/api/pass/claim", { data: {} });
+  if (!claimed.ok()) return null;
+  const { ticket } = (await claimed.json()) as { ticket: { shortCode: string } };
+  return { page, shortCode: ticket.shortCode };
+}
+
+/** A member approved by the bar, who has claimed nothing. */
+async function member(browser: Browser): Promise<{ page: Page; lastName: string }> {
+  const lastName = `Picture${run}${Math.floor(Math.random() * 1e4)}`;
   const context = await browser.newContext();
   await context.addCookies([{ name: "kari_lang", value: "en", url: "http://localhost:3000" }]);
   const page = await context.newPage();
   const registered = await page.request.post("/api/auth/register", {
     data: {
       firstName: "Mariam",
-      lastName: `Picture${run}`,
+      lastName,
       phone: `5${String(Math.floor(Math.random() * 1e8)).padStart(8, "0")}`,
       password: "e2e-guest-password",
       profileUrl: `mariam.picture.${run}.${Math.floor(Math.random() * 1e6)}`,
@@ -42,11 +52,7 @@ async function memberWithPass(browser: Browser): Promise<{ page: Page; shortCode
   const me = (await registered.json()) as { id: string };
   const admin = await signedIn(browser, seed.AdminPhone, seed.AdminPassword);
   expect((await admin.request.post(`/api/admin/users/${me.id}/review`, { data: { decision: "approve" } })).ok()).toBe(true);
-
-  const claimed = await page.request.post("/api/pass/claim", { data: {} });
-  if (!claimed.ok()) return null;
-  const { ticket } = (await claimed.json()) as { ticket: { shortCode: string } };
-  return { page, shortCode: ticket.shortCode };
+  return { page, lastName };
 }
 
 /** Checks that a response really is the picture: a PNG, phone-shaped, served as a download. */
@@ -123,26 +129,35 @@ test("the door finds a guest from the short code a saved ticket carries", async 
 // secret and is on no machine by default — so this test holds whichever is true here: with
 // no certificate there is no badge and no file; with one, an iPhone is offered the badge and
 // the file behind it is a pass. Either way the badge is offered exactly when the file exists.
-test("an iPhone is offered Apple Wallet exactly when a pass can be made, and no other phone is", async ({ browser, playwright }) => {
-  const member = await memberWithPass(browser);
-  test.skip(member === null, "the bar is closed tonight in this database: there is no pass to keep");
-  const { page: holder, shortCode } = member!;
+//
+// What a member keeps in Wallet is their card: one for every night. So it is theirs before
+// they have claimed any pass, and the door reads it as the member.
+test("a member's pass in Wallet is their card: offered on an iPhone with or without a ticket, and read at the door as the member", async ({ browser, playwright }) => {
+  const { page: holder, lastName } = await member(browser);
 
   const file = await holder.request.get("/pass/wallet.pkpass");
   const made = file.status() === 200;
   expect([200, 404]).toContain(file.status());
 
-  // The same person on an iPhone.
+  // The same person on an iPhone, holding no pass for tonight: the card is offered all the same.
   const iphone = await browser.newContext({ ...playwright.devices["iPhone 14"], storageState: await holder.context().storageState() });
   const onIphone = await iphone.newPage();
   await onIphone.goto("/pass");
-  await expect(onIphone.getByRole("button", { name: "Download ticket" })).toBeVisible();
+  await expect(onIphone.locator(".ticket")).toContainText(lastName);
   const badge = onIphone.getByRole("link", { name: "Add to Apple Wallet" });
   await expect(badge).toHaveCount(made ? 1 : 0);
 
+  // With tonight's pass in hand it is still the card that Wallet is offered — once.
+  const claimed = await holder.request.post("/api/pass/claim", { data: {} });
+  if (claimed.ok()) {
+    await onIphone.reload();
+    await expect(onIphone.getByRole("button", { name: "Download ticket" })).toBeVisible();
+    await expect(badge).toHaveCount(made ? 1 : 0);
+  }
+
   // An Android phone is never offered it.
   await holder.goto("/pass");
-  await expect(holder.getByRole("button", { name: "Download ticket" })).toBeVisible();
+  await expect(holder.locator(".ticket")).toContainText(lastName);
   await expect(holder.getByRole("link", { name: "Add to Apple Wallet" })).toHaveCount(0);
 
   // Nobody else's pass, with or without a certificate.
@@ -155,13 +170,45 @@ test("an iPhone is offered Apple Wallet exactly when a pass can be made, and no 
   // The type is what makes Safari offer "Add" instead of saving a file.
   await expect(badge).toHaveAttribute("href", "/pass/wallet.pkpass");
   expect(file.headers()["content-type"]).toBe("application/vnd.apple.pkpass");
-  expect(file.headers()["content-disposition"]).toBe(`attachment; filename="kari-${shortCode}.pkpass"`);
+  expect(file.headers()["content-disposition"]).toBe('attachment; filename="kari-member.pkpass"');
   expect(file.headers()["cache-control"]).toContain("private");
-  const body = await file.body();
-  expect(body.subarray(0, 2).toString("latin1")).toBe("PK");
-  // Its code is the ticket's short code and nothing else: large, clean squares, which the
-  // door reads as a lookup. The pass's own key is nowhere in it.
-  expect(body.toString("latin1")).toContain(`"message":"${shortCode}"`);
-  // The band is drawn for this pass: the holder's name is on it.
-  expect(body.toString("latin1")).toContain("strip@3x.png");
+  const body = (await file.body()).toString("latin1");
+  expect(body.slice(0, 2)).toBe("PK");
+  // The band is drawn for this card: the holder's name is on it.
+  expect(body).toContain("strip@3x.png");
+  // It has no night to run out on, and its code is the member's own, the same every time.
+  expect(body).not.toContain("expirationDate");
+  const token = /"message":"(KM\.[0-9A-Z]{7})"/.exec(body)?.[1];
+  expect(token).toBeTruthy();
+  expect((await (await holder.request.get("/pass/wallet.pkpass")).body()).toString("latin1")).toContain(`"message":"${token}"`);
+
+  // The scanner reads it as that member. A code that never changes is not proof: it is a
+  // lookup, "by hand", and a person decides.
+  const staff = await signedIn(browser, seed.StaffPhone, seed.StaffPassword);
+  const scan = (await (await staff.request.post("/api/door/scan", { data: { token } })).json()) as {
+    verdict: string;
+    method: string;
+    person: { lastName: string };
+  };
+  expect(scan.person.lastName).toBe(lastName);
+  expect(scan.verdict).toBe("ok");
+  expect(scan.method).toBe("manual");
+});
+
+test("a guest's pass in Wallet is still a ticket for one night", async ({ browser }) => {
+  const staff = await signedIn(browser, seed.StaffPhone, seed.StaffPassword);
+  const issued = await staff.request.post("/api/door/walk-in", { data: { firstName: "Tamar", lastName: `Night${run}`, personalNumber: "" } });
+  expect(issued.ok()).toBe(true);
+  const { ticketToken, pass } = (await issued.json()) as { ticketToken: string; pass: { shortCode: string } };
+
+  const guest = await (await browser.newContext()).newPage();
+  const file = await guest.request.get(`/t/${ticketToken}/wallet.pkpass`);
+  expect([200, 404]).toContain(file.status());
+  if (file.status() !== 200) return;
+
+  expect(file.headers()["content-disposition"]).toBe(`attachment; filename="kari-${pass.shortCode}.pkpass"`);
+  const body = (await file.body()).toString("latin1");
+  // Its code is the ticket's short code and nothing else, and it leaves with its night.
+  expect(body).toContain(`"message":"${pass.shortCode}"`);
+  expect(body).toContain("expirationDate");
 });

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { VenueMark, WoxCredit } from "@/components/brand";
+import { DecisionChip, decisionTone, useDecisionWord } from "@/components/decision-chip";
 import { Face } from "@/components/face";
 import { Field, FormError } from "@/components/field";
 import { FindIcon, LogIcon, ScanIcon } from "@/components/icons";
@@ -14,7 +15,7 @@ import { useI18n } from "@/i18n/provider";
 import { api, isApiError } from "@/lib/api";
 import { networkOf } from "@/lib/profile-link";
 import { savedTicketCode } from "@/lib/saved-ticket";
-import type { DecideResponse, Decision, DoorTonight, Entry, ScanResult, SearchHit, Verdict, WalkInResponse } from "@/lib/types";
+import type { DecideResponse, Decision, DoorTonight, Entry, ScanResult, SearchHit, UndoResponse, Verdict, WalkInResponse } from "@/lib/types";
 import { Scanner, ScannerStarting } from "./scanner";
 
 type Tab = "scan" | "find" | "log";
@@ -139,6 +140,11 @@ export function DoorScreen({ first }: { first: DoorTonight | null }) {
   const [notPass, setNotPass] = useState(false);
   // False once the camera is blocked or missing: "point the camera" is then the wrong advice.
   const [camera, setCamera] = useState(true);
+  // The last thing this phone wrote down. The stamp is on screen for a second; this stays
+  // under the scanner until the next decision, so a tap that was a slip is seen — and an
+  // admission can be taken back from it. See BUG-0008.
+  const [last, setLast] = useState<Entry | null>(null);
+  const [undoing, setUndoing] = useState(false);
   const busy = useRef(false);
 
   const onToken = useCallback(async (token: string) => {
@@ -195,9 +201,34 @@ export function DoorScreen({ first }: { first: DoorTonight | null }) {
   function decided(response: DecideResponse) {
     setTonight(response.tonight);
     setResult(null);
-    // The stamp is the receipt: one beat on screen, then straight back to the next guest.
-    setFlash(response.entry.decision);
+    setLast(response.entry);
+    // The stamp says it happened: one beat on screen, then straight back to the next guest.
+    setFlash(response.entry.decision === "denied" ? "denied" : "admitted");
     setTimeout(() => setFlash(null), 1100);
+  }
+
+  // An admission taken back from the result itself. The same person stays on screen, read
+  // afresh: whoever it is about is very likely still standing there.
+  function undone(response: UndoResponse) {
+    setTonight(response.tonight);
+    setResult(response.result);
+    if (response.entry) setLast(response.entry);
+  }
+
+  // …or from the line under the scanner, a moment after the slip.
+  async function undoLast() {
+    if (!last?.passId) return;
+    setUndoing(true);
+    setFailure(null);
+    try {
+      const response = await api.post<UndoResponse>("/door/undo", { passId: last.passId, verdict: "reentry", method: last.method });
+      setTonight(response.tonight);
+      // Nothing written means another phone had already taken it back: there is no receipt left.
+      setLast(response.entry);
+    } catch (error) {
+      setFailure(isApiError(error) ? error.code : "server_error");
+    }
+    setUndoing(false);
   }
 
   return (
@@ -221,6 +252,21 @@ export function DoorScreen({ first }: { first: DoorTonight | null }) {
               <p role="status" className="rounded-2xl bg-stop px-4 py-3 text-center font-bold text-ink-deep">
                 {t.verdict.unknown}. <span className="font-semibold">{t.verdict.unknownHint}</span>
               </p>
+            ) : last ? (
+              <EntryRow
+                entry={last}
+                onOpen={open}
+                receipt
+                action={
+                  // Only a first admission has anything to take back: someone let back in was
+                  // already inside, and a refusal changed nothing.
+                  last.decision === "admitted" && last.verdict !== "reentry" && last.passId ? (
+                    <button type="button" className="btn btn-line btn-small text-paper-light" disabled={undoing} onClick={undoLast}>
+                      {t.door.undoShort}
+                    </button>
+                  ) : null
+                }
+              />
             ) : (
               camera && <p className="py-3 text-center font-semibold text-paper-light">{t.door.pointCamera}</p>
             )}
@@ -235,11 +281,23 @@ export function DoorScreen({ first }: { first: DoorTonight | null }) {
         {tab === "log" && <Log entries={tonight?.recent ?? []} onOpen={open} />}
       </DoorFrame>
 
-      {result && <ResultSheet result={result} onClose={() => setResult(null)} onDecided={decided} />}
+      {result && (
+        <ResultSheet
+          // A new answer about the same person is a new sheet: nothing half-done carries over.
+          key={`${result.pass?.id ?? result.person?.userId ?? ""}:${result.verdict}:${result.pass?.admittedAt ?? ""}`}
+          result={result}
+          onClose={() => setResult(null)}
+          onDecided={decided}
+          onUndone={undone}
+        />
+      )}
       {walkIn && (
         <WalkInSheet
           onClose={() => setWalkIn(false)}
-          onIssued={(response) => setTonight(response.tonight)}
+          onIssued={(response) => {
+            setTonight(response.tonight);
+            setLast(response.entry);
+          }}
         />
       )}
 
@@ -277,10 +335,12 @@ function ResultSheet({
   result,
   onClose,
   onDecided,
+  onUndone,
 }: {
   result: ScanResult;
   onClose: () => void;
   onDecided: (response: DecideResponse) => void;
+  onUndone: (response: UndoResponse) => void;
 }) {
   const { t, fill, night, time } = useI18n();
   const [denying, setDenying] = useState(false);
@@ -288,6 +348,11 @@ function ResultSheet({
   const [failure, setFailure] = useState<string | null>(null);
   const { verdict, person, pass, inviter, warnings } = result;
   const tone = TONE[verdict];
+  // A member's own card, on a night they hold no pass for: it is the member that is good,
+  // not a pass.
+  const card = verdict === "ok" && !pass;
+  // Tonight's pass was let in. Whatever else is true of it, that can be taken back.
+  const admitted = pass?.admittedAt && verdict !== "wrong_night" ? pass.admittedAt : null;
 
   // Esc closes: a keyboard-attached tablet at the door is a real setup.
   useEffect(() => {
@@ -316,8 +381,36 @@ function ResultSheet({
     }
   }
 
+  // "Already in" was wrong: Admit had been tapped by a slip, or for a test. The answer comes
+  // back as the same pass, not let in, and this sheet is drawn again from it.
+  async function undo() {
+    if (!pass) return;
+    setBusy(true);
+    setFailure(null);
+    try {
+      onUndone(await api.post<UndoResponse>("/door/undo", { passId: pass.id, verdict, method: result.method }));
+    } catch (error) {
+      setFailure(isApiError(error) ? error.code : "server_error");
+      setBusy(false);
+    }
+  }
+
+  // "Already in" is a claim. This is its evidence: when — and, on a line of its own, whose
+  // tap it was and how.
+  const admittedBy = pass?.admittedBy
+    ? fill(t.door.admittedBy, { name: pass.admittedBy }) + (pass.admittedMethod === "manual" ? `, ${t.door.byHand}` : "")
+    : null;
+
   const hints: Record<Verdict, string> = {
-    ok: t.verdict.okHint,
+    // Only a code read live off a phone is proof. A member's card, a saved ticket and a name
+    // typed into Find are a person to look at.
+    ok: card
+      ? person?.hasPhoto
+        ? t.verdict.okCardHint
+        : t.verdict.okCardNoPhotoHint
+      : result.method === "manual"
+        ? t.verdict.okByHandHint
+        : t.verdict.okHint,
     reentry: fill(t.verdict.reentryHint, { time: pass?.admittedAt ? time(pass.admittedAt) : "" }),
     stale: t.verdict.staleHint,
     wrong_night: fill(t.verdict.wrong_nightHint, { date: pass ? night(pass.night, "long") : "" }),
@@ -328,13 +421,17 @@ function ResultSheet({
     not_on_list: t.verdict.not_on_listHint,
   };
 
+  const title = card ? t.verdict.okCard : t.verdict[verdict];
   const reasons = [t.door.reasonId, t.door.reasonDrunk, t.door.reasonDress, t.door.reasonFull, t.door.reasonBehaviour, t.door.reasonOther];
 
   return (
-    <div className="fixed inset-0 z-20 flex flex-col bg-ink-deep" role="dialog" aria-modal="true" aria-label={t.verdict[verdict]}>
+    <div className="fixed inset-0 z-20 flex flex-col bg-ink-deep" role="dialog" aria-modal="true" aria-label={title}>
       <div className={`${BAND[tone]} px-5 pb-5 pt-[max(1.25rem,env(safe-area-inset-top))]`}>
-        <h2 className="text-[2.6rem]">{t.verdict[verdict]}</h2>
-        <p className="mt-1 text-lg font-semibold">{hints[verdict]}</p>
+        <h2 className="text-[2.6rem]">{title}</h2>
+        <p className="mt-1 text-lg font-semibold">
+          {hints[verdict]}
+          {verdict === "reentry" && admittedBy && <span className="block">{admittedBy}</span>}
+        </p>
       </div>
 
       <div className="mx-auto w-full max-w-md flex-1 overflow-y-auto px-4 py-4">
@@ -372,9 +469,13 @@ function ResultSheet({
             <div className="mt-3 flex flex-wrap gap-2">
               <span className="chip">{t.status[person.status]}</span>
               {pass && <span className="chip code !tracking-[0.1em]">{pass.shortCode}</span>}
-              <span className="chip">
-                {person.visits === 0 ? t.door.firstTime : fill(t.door.nights, { n: person.visits })}
-              </span>
+              {/* Nights are counted for an account. A guest with none is not "first time here":
+                  nobody knows — and the card must never say that under "already in". */}
+              {person.userId && (
+                <span className="chip">{person.visits === 0 ? t.door.firstTime : fill(t.door.nights, { n: person.visits })}</span>
+              )}
+              {/* Under any other verdict, that they are in is still worth knowing. */}
+              {admitted && verdict !== "reentry" && <span className="chip">{fill(t.door.insideSince, { time: time(admitted) })}</span>}
             </div>
 
             {person.personalNumber && (
@@ -459,8 +560,16 @@ function ResultSheet({
                 {t.door.admit}
               </button>
             </div>
+            {/* The third answer, when the door says they are in and they are not: Admit was a
+                slip, or a test. Refusing them instead would write a refusal against a guest
+                and leave them "in". */}
+            {admitted && (
+              <button type="button" className="btn btn-line mt-3 w-full text-paper-light" disabled={busy} onClick={undo}>
+                {t.door.undo}
+              </button>
+            )}
             <button type="button" className="btn mt-1 w-full text-ink-soft" onClick={onClose}>
-              {t.common.cancel}
+              {t.common.close}
             </button>
           </>
         )}
@@ -568,38 +677,69 @@ function Finder({ onOpen, onWalkIn }: { onOpen: (hit: SearchHit) => void; onWalk
 /**
  * Tonight's list: everyone the door has decided about, the latest first. A row opens that
  * person again — to look at who it was, or to decide again. Nothing in the list is ever
- * changed: a second answer is a second record.
+ * changed: a second answer is a second record, and so is an admission taken back.
  */
 function Log({ entries, onOpen }: { entries: Entry[]; onOpen: (entry: Entry) => void }) {
-  const { t, time } = useI18n();
+  const { t } = useI18n();
   if (entries.length === 0) return <p className="pt-6 text-center text-ink-soft">{t.door.logEmpty}</p>;
 
   return (
     <ul className="space-y-2">
       {entries.map((entry) => (
         <li key={entry.id}>
-          <button
-            type="button"
-            // A record of someone the door cannot look up again has nothing to open.
-            disabled={!entry.passId && !entry.userId}
-            onClick={() => onOpen(entry)}
-            className="flex w-full items-center justify-between gap-3 rounded-2xl bg-ink px-4 py-3 text-left transition-colors hover:bg-ink-raised active:bg-ink-raised"
-          >
-            <span className="min-w-0">
-              <span className="block truncate font-bold text-paper-light">{entry.personName}</span>
-              <span className="block truncate text-sm text-ink-soft">
-                <span className="tabular">{time(entry.createdAt)}</span>
-                {entry.method === "manual" && `, ${t.door.byHand}`}
-                {entry.reason && `, ${entry.reason}`}
-              </span>
-            </span>
-            <span className={`chip flex-none ${entry.decision === "admitted" ? "text-go" : "text-stop"}`}>
-              {entry.decision === "admitted" ? t.door.admitted : t.door.denied}
-            </span>
-          </button>
+          <EntryRow entry={entry} onOpen={onOpen} />
         </li>
       ))}
     </ul>
+  );
+}
+
+/**
+ * One record of the door's: who, when, what was decided. It opens that person again.
+ *
+ * In the list the decision is the chip at the end of the row. Under the scanner the row is
+ * the receipt of the last decision made on this phone: the decision is said first, in its
+ * colour, and the end of the row is free for the way back.
+ */
+function EntryRow({
+  entry,
+  onOpen,
+  receipt = false,
+  action,
+}: {
+  entry: Entry;
+  onOpen: (entry: Entry) => void;
+  receipt?: boolean;
+  action?: ReactNode;
+}) {
+  const { t, time } = useI18n();
+  const word = useDecisionWord();
+
+  return (
+    <div className="flex items-center rounded-2xl bg-ink" role={receipt ? "status" : undefined}>
+      <button
+        type="button"
+        // A record of someone the door cannot look up again has nothing to open.
+        disabled={!entry.passId && !entry.userId}
+        onClick={() => onOpen(entry)}
+        className={`flex min-w-0 flex-1 items-center justify-between gap-3 rounded-2xl px-4 text-left transition-colors hover:bg-ink-raised active:bg-ink-raised ${
+          receipt ? "py-2.5" : "py-3"
+        }`}
+      >
+        <span className="min-w-0">
+          <span className="block truncate font-bold text-paper-light">{entry.personName}</span>
+          <span className="block truncate text-sm text-ink-soft">
+            {receipt && <span className={`font-bold ${decisionTone(entry.decision, "ink")}`}>{word(entry.decision)} </span>}
+            <span className="tabular">{time(entry.createdAt)}</span>
+            {/* How, and why, are for the list: the receipt has a button to make room for. */}
+            {!receipt && entry.method === "manual" && `, ${t.door.byHand}`}
+            {!receipt && entry.reason && `, ${entry.reason}`}
+          </span>
+        </span>
+        {!receipt && <DecisionChip decision={entry.decision} on="ink" className="flex-none" />}
+      </button>
+      {action && <div className="flex-none pr-3">{action}</div>}
+    </div>
   );
 }
 

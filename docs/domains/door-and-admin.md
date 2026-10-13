@@ -38,6 +38,10 @@ simply there from the tap, and the picture appears in it.
 - A ticket saved as a picture is read as well. Its QR is the ticket's address with the short
   code on the end; the scanner looks the guest up by that code and opens the usual sheet,
   marked "by hand". See tickets.md, "Download ticket".
+- A member's card from an iPhone's Wallet (`KM.<code>`) is posted like any code; the API
+  knows whose it is. It opens the member, marked "by hand": with tonight's pass if they
+  hold one, otherwise as "Member", in the go tone — the card is for every night, and
+  Admit issues tonight's pass. See tickets.md, "A member's card".
 - The camera keeps running while a result is up but stops reading, so it is ready at once.
 - The screen is kept awake; the camera is started again if the phone took it away; a torch
   button appears where the device has one.
@@ -52,12 +56,25 @@ A read token is posted to `POST /api/door/scan`. The phone vibrates: once for go
 A full-screen sheet over everything, including the dock.
 
 1. A band in the verdict's tone — go, wait or stop — with the verdict in words and a hint.
+   The hint claims only what is true of how the person was reached: "live code" for a code
+   read live off a phone; "check the face or an ID" for a pass reached by hand; "check the
+   face against the photo" for a member's card (or "no photo, ask for an ID").
+   **"Already in" comes with its evidence:** when, whose tap, and "by hand" where the
+   person was not scanned.
 2. Warnings: same name as a suspended person; at capacity; marked closed tonight.
-3. The person: photo, name large, status, the pass's short code, nights so far; the personal
+3. The person: photo, name large, status, the pass's short code, nights so far (for an
+   account only — nobody counts the nights of a guest with none, and the card does not guess
+   "first time here"); that they are in, under any verdict but "already in"; the personal
    number in a box marked "check this against their ID"; who invited them; last visit; times
    turned away before; staff notes; a button to open their profile, named for the network it is
    on ("Open Instagram"; for a network the app has no name for, the host itself).
 4. Two large buttons: **Deny** and **Admit**. Deny asks for a reason from six, in one more tap.
+5. When tonight's pass is in, a third answer under them: **"Mistake, they are not in"**. It
+   takes the admission back (`POST /door/undo`) and the sheet is drawn again from the
+   answer — the same person, not let in, usually now a go. Before this the only way out of a
+   wrong "already in" was Deny, which wrote a refusal against a guest and changed nothing
+   ([BUG-0008](../bugs/0008-the-door-says-already-in-with-no-evidence-and-no-way-back.md)).
+   The sheet's own way out is "Close", not "Cancel": in Georgian the two words were one.
 
 The verdict is advice. Staff may admit against a red band; the log records what they saw. The
 buttons carry the advice too: on a go the Admit button is filled and Deny is an outline, on a
@@ -65,6 +82,15 @@ stop it is the other way round, and on a wait both are filled. Neither ever move
 
 After a decision a stamp — ADMITTED or DENIED — fills the screen for a beat, then the scanner
 is back. Escape closes the sheet.
+
+### The receipt
+
+The stamp is gone in a second, and Admit is one tap. So the last decision made on this phone
+stays under the scanner, in place of "point the camera at a pass", until the next one: the
+name, what was decided in its colour, the time. Tapping it opens that person again. Beside a
+first admission is **"Mistake"**, which takes it back in one tap. Not beside a re-entry —
+that person was already inside — and not beside a refusal, which changed nothing. It is
+this phone's own receipt, not the door's latest row: what another phone decided is in the Log.
 
 ### Find
 
@@ -81,7 +107,9 @@ and hold a ticket for coming back in.
 
 Tonight's last 40 decisions. In Georgian the tab is "სია" (the list). A row opens that person
 again, in the same sheet, marked "by hand" — to see who it was, or to decide again. Nothing in
-the list is ever changed: a second answer is a second record.
+the list is ever changed: a second answer is a second record, and an admission taken back is a
+third kind of row ("Taken back", quiet), written after the admission it answers. The chip
+is `components/decision-chip.tsx`, shared with the back office's log and a person's history.
 
 ## The back office — `/admin`
 

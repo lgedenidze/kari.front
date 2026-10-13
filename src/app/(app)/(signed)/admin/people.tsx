@@ -5,6 +5,7 @@ import { Face } from "@/components/face";
 import { FormError } from "@/components/field";
 import { RowsSkeleton } from "@/components/loading";
 import { useMe } from "@/components/me";
+import { DecisionChip } from "@/components/decision-chip";
 import { useI18n } from "@/i18n/provider";
 import { api, isApiError } from "@/lib/api";
 import { peek, put } from "@/lib/live-store";
@@ -496,9 +497,7 @@ function PersonDetail({ id, onBack }: { id: string; onBack: () => void }) {
                     {entry.reason && `, ${entry.reason}`}
                   </span>
                 </span>
-                <span className={`chip flex-none ${entry.decision === "admitted" ? "text-stamp-green" : "text-stamp-red"}`}>
-                  {entry.decision === "admitted" ? t.door.admitted : t.door.denied}
-                </span>
+                <DecisionChip decision={entry.decision} className="flex-none" />
               </li>
             ))}
           </ul>

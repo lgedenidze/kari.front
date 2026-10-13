@@ -51,6 +51,7 @@ src/
     …/wallet.pkpass/     the ticket for an iPhone's Wallet, beside each picture
     sitemap.ts robots.ts icon.svg apple-icon.png
   components/            ticket, live-ticket, stamp, qr, night-picker, app-chrome (dock), brand, icons, face,
+                         decision-chip (what the door wrote down, in every list of its records),
                          return-action (the landing page's action for someone who comes back),
                          loading (skeletons), use-live (a screen's data), save-to-phone
   i18n/                  en.ts, ka.ts, formatters, provider
@@ -103,7 +104,11 @@ e2e/                     flow.spec.ts (the journeys), loading.spec.ts (how a scr
   inside the screen (BUG-0003).
 - **No stamp, badge or overlay on a QR code.** It breaks the scan.
 - **The pass key and the live code never leave the live ticket.** The downloadable picture
-  and the Wallet pass carry the ticket's address and short code, nothing that admits by itself.
+  and the Wallet pass carry the ticket's address and short code — a member's card in Wallet,
+  the member's own code — and nothing that admits by itself.
+- **The door's screen claims only what it can show.** "Live code" only for a code read live;
+  "already in" with who let them in; no "first time here" for someone nobody counts. And
+  whatever one tap does at the door, one tap takes back (BUG-0008).
 - **Check every screen at phone size before calling UI work done:** `node e2e/phone-audit.mjs 360`
   photographs all of them into `test-results/phone/` and reports any that scroll sideways.
   `node e2e/find-overflow.mjs <path>` names the element at fault.

@@ -133,6 +133,25 @@ plain link to the ticket as a `.pkpass`: the phone answers that file with its ow
 sheet. Each kind of ticket has its address, beside its picture: `/pass/wallet.pkpass`,
 `/i/{code}/wallet.pkpass`, `/t/{token}/wallet.pkpass`, under the same rules as the page.
 
+- **A member's card.** The owner, the night after the pass shipped: "active users qr should
+  be active at wallet always, not invited guys". A ticket is for one night, and a guest adds
+  it for that night. A member adds **their card**, once: `/pass/wallet.pkpass` answers a
+  member in good standing with the card whether or not they hold a pass tonight
+  (`GET /api/pass/card`; anyone else who holds a ticket tonight still gets that ticket).
+  It is the same pass with no night on it (`walletCard` in `lib/wallet-ticket.ts`): where
+  the date was, "valid: every night"; on the stub, "member since" the year; no
+  `expirationDate`, so it never goes grey. Its code is the member's own, `KM.<code>` —
+  ten characters, still the smallest QR — with the seven-character code printed under it,
+  which staff can type into Find. Its serial number is the card's, so adding it again
+  replaces the one in Wallet. The door reads it as the member, with their photo, marked
+  "by hand"; see door-and-admin.md, "Scanning". Suspend the member and the card is worth
+  nothing that minute, with no need to reach the phone. The live pass in the app is
+  unchanged: it is still the strong proof, and still claimed for a night.
+- **Where the badge is, for a member.** Under tonight's ticket as before, and also — by
+  itself (`WalletLink`) — under the unclaimed and the closed-night ticket: the card is
+  theirs on a night with nothing to save. This phone remembers the card by the member,
+  not by a ticket's short code, so the badge is not offered afresh every night.
+
 - **What Wallet allows.** It draws every word of a pass itself, in its own typeface, and
   puts each kind of field where it likes. It draws the code too: black on a white tile, at
   the foot of the pass, at its own size, with whatever room is left empty above it. None of
@@ -164,7 +183,7 @@ sheet. Each kind of ticket has its address, beside its picture: `/pass/wallet.pk
   decide, and a second showing of the same code says "already in". A ticket the bar
   cancels is caught by that lookup, not by Wallet.
 - **"Added to Wallet".** A page cannot ask Wallet what is in it; only an app can. So the
-  phone remembers, for each ticket, that its badge was tapped (`localStorage`), and shows
+  phone remembers, for each ticket or card, that its badge was tapped (`localStorage`), and shows
   "Added to Wallet" with an "Add again" link in the badge's place — the tap may have been
   called off, and a pass already in Wallet is replaced by adding it again.
 - **How the file is made** (`lib/pkpass.ts`, no knowledge of tickets, tested with a
@@ -190,7 +209,9 @@ sheet. Each kind of ticket has its address, beside its picture: `/pass/wallet.pk
   with `openssl smime -verify` all the way to Apple's root certificate, and its manifest
   matches its files. The owner looked at the first design on his iPhone the same day and
   asked for this one. **A pass already in Wallet does not change by itself:** to see a new
-  design, delete the pass and add it again.
+  design, delete the pass and add it again. A one-night pass a member added before the
+  card existed still reads at the door that night, by its short code, and goes grey after.
+  The card has not been seen in a real Wallet by anyone but the owner.
 
 ### Download ticket
 

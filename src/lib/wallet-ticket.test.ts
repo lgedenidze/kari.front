@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { Ticket } from "./types";
-import { ticketKind, walletTicket } from "./wallet-ticket";
+import type { MemberCard, Ticket } from "./types";
+import { ticketKind, walletCard, walletTicket } from "./wallet-ticket";
 
 const ticket: Ticket = {
   publicId: "V7FQPBJ2DZX2B1WF",
@@ -81,5 +81,45 @@ describe("a ticket in Wallet", () => {
     const guest: Ticket = { ...ticket, kind: "guest", inviterName: "Keti Dolidze" };
     expect(ticketKind(guest, "en")).toBe("Guest of Keti Dolidze");
     expect(front(walletTicket({ ticket: guest, live, lang: "en" })).headerFields[0]).toMatchObject({ label: "Date", value: "Tue, 13 Oct" });
+  });
+});
+
+describe("a member's card in Wallet", () => {
+  // 20:30 UTC on the last day of the year is already the new year in Tbilisi.
+  const card: MemberCard = { code: "7K2M9QX", token: "KM.7K2M9QX", firstName: "ნინო", lastName: "აბაშიძე", since: "2025-12-31T20:30:00Z" };
+  const pass = walletCard({ card, live, lang: "ka" });
+  const fields = front(pass);
+
+  it("has no night on it and never runs out", () => {
+    // Where a ticket has its date, the card says what it is good for.
+    expect(fields.headerFields).toEqual([{ key: "valid", label: "მოქმედებს", value: "ყოველ ღამე" }]);
+    expect(pass.expirationDate).toBeUndefined();
+    expect(pass.relevantDate).toBeUndefined();
+  });
+
+  it("carries the member's own code, which the door reads as the member", () => {
+    // Ten characters: still the smallest QR there is. Under it, the part staff can type.
+    expect(pass.barcodes).toEqual([{ format: "PKBarcodeFormatQR", message: "KM.7K2M9QX", messageEncoding: "iso-8859-1", altText: "7K2M9QX" }]);
+  });
+
+  it("is one card per member, so adding it again replaces it", () => {
+    expect(pass.serialNumber).toBe("card-7K2M9QX");
+    expect(walletCard({ card, live, lang: "en" }).serialNumber).toBe(pass.serialNumber);
+    expect(pass.sharingProhibited).toBe(true);
+  });
+
+  it("has the same stub as every ticket: since when, and who made it", () => {
+    expect(fields.secondaryFields.map((field) => [field.label, field.value])).toEqual([
+      ["წევრია", "2026 წლიდან"],
+      ["powered by", "wox.ge"],
+    ]);
+    expect(front(walletCard({ card, live, lang: "en" })).secondaryFields[0]).toMatchObject({ label: "Member since", value: "2026" });
+  });
+
+  it("leaves the name to the band, and says it in words for VoiceOver and on the back", () => {
+    expect(fields.primaryFields).toBeUndefined();
+    expect(pass.description).toBe("KARI, წევრის ბარათი, ნინო აბაშიძე");
+    expect(fields.backFields[0]).toEqual({ key: "name", label: "წევრის ბარათი", value: "ნინო აბაშიძე" });
+    expect(fields.backFields.map((field) => field.value)).toEqual(expect.arrayContaining(["https://kari.example/pass", "https://wox.ge"]));
   });
 });

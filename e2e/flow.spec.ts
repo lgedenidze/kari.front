@@ -215,6 +215,67 @@ test("staff issue a ticket at the door, and it opens on the walk-in's own phone"
   expect(scanned.verdict).toBe("reentry");
 });
 
+// Regression test for BUG-0008. The door said "already in" about a guest who had not come in:
+// Admit had been tapped an hour before. The screen gave no evidence, called the guest "first
+// time here" under "already inside", and had no way to put it right.
+test("the door says who let someone in, and takes back an admission made by mistake", async ({ browser }) => {
+  const name = `Tamar Undo${run}`;
+  const staff = await signIn(browser, seed.StaffPhone, seed.StaffPassword);
+  const inside = async () => ((await (await staff.request.get("/api/door/tonight")).json()) as { inside: number }).inside;
+
+  // A guest with no account, let in — as it turns out, by mistake.
+  const issued = await staff.request.post("/api/door/walk-in", { data: { firstName: "Tamar", lastName: `Undo${run}`, personalNumber: "" } });
+  expect(issued.ok()).toBe(true);
+  const before = await inside();
+
+  // The next time they are looked up, the door says they are in — and now also when, whose
+  // tap it was, and how.
+  await staff.goto("/door");
+  await staff.getByRole("button", { name: "Log" }).click();
+  await staff.getByRole("button", { name: new RegExp(name) }).first().click();
+  const sheet = staff.getByRole("dialog");
+  await expect(sheet.getByRole("heading", { name: "Already inside" })).toBeVisible();
+  await expect(sheet).toContainText(/In since \d\d:\d\d\.\s*Let in by Door Staff, by hand/);
+  // Nobody counts the nights of a guest with no account: the card does not guess.
+  await expect(sheet).not.toContainText("First time here");
+
+  // They are not in. One tap says so, and the same person is read afresh: good to come in.
+  await sheet.getByRole("button", { name: "Mistake, they are not in" }).click();
+  await expect(sheet.getByRole("heading", { name: "Valid pass" })).toBeVisible();
+  // Found by hand, not read off a live code: the sheet does not claim otherwise.
+  await expect(sheet).toContainText("For tonight. Check the face or an ID.");
+  await expect(sheet.getByRole("button", { name: "Mistake, they are not in" })).toHaveCount(0);
+  expect(await inside()).toBe(before - 1);
+
+  // Let in for real. The stamp is gone in a second; the receipt stays under the scanner.
+  await sheet.getByRole("button", { name: "Admit" }).click();
+  await expect(sheet).toBeHidden();
+  await staff.getByRole("button", { name: "Scan" }).click();
+  const receipt = staff.getByRole("status").filter({ hasText: name });
+  await expect(receipt).toContainText("Admitted");
+  expect(await inside()).toBe(before);
+
+  // A slip is taken back from the receipt itself.
+  await receipt.getByRole("button", { name: "Mistake" }).click();
+  await expect(receipt).toContainText("Taken back");
+  await expect(receipt.getByRole("button", { name: "Mistake" })).toHaveCount(0);
+  expect(await inside()).toBe(before - 1);
+
+  // Nothing was rewritten: tonight's list has every step, the latest first.
+  await staff.getByRole("button", { name: "Log" }).click();
+  const rows = staff.locator("main li", { hasText: name });
+  await expect(rows).toHaveCount(4);
+  await expect(rows.nth(0)).toContainText("Taken back");
+  await expect(rows.nth(1)).toContainText("Admitted");
+  await expect(rows.nth(2)).toContainText("Taken back");
+  await expect(rows.nth(3)).toContainText("Admitted");
+
+  // And the back office reads the same four rows.
+  const admin = await signIn(browser, seed.AdminPhone, seed.AdminPassword);
+  await admin.goto("/admin#log");
+  await expect(admin.locator("main li", { hasText: name }).filter({ hasText: "Taken back" })).toHaveCount(2);
+});
+
 test("the door and the back office turn everyone else away", async ({ browser }) => {
   const visitor = await (await english(browser)).newPage();
   await visitor.goto("/door");

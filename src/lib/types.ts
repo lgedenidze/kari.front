@@ -7,6 +7,8 @@ export type PassKind = "member" | "guest" | "door";
 export type PassStatus = "active" | "revoked";
 export type InviteState = "pending" | "accepted" | "declined" | "revoked" | "expired";
 export type Decision = "admitted" | "denied";
+/** What a row of the door's log records: a decision, or an admission that was taken back. */
+export type EntryDecision = Decision | "undone";
 export type EntryMethod = "scan" | "manual";
 
 export type Verdict =
@@ -156,6 +158,9 @@ export interface PassCard {
   night: string;
   status: PassStatus;
   admittedAt: string | null;
+  /** Whose tap let this pass in, and whether its code was scanned or the person was found by hand. */
+  admittedBy: string | null;
+  admittedMethod: EntryMethod | null;
 }
 
 export interface ScanResult {
@@ -172,7 +177,7 @@ export interface Entry {
   night: string;
   personName: string;
   staffName: string;
-  decision: Decision;
+  decision: EntryDecision;
   reason: string | null;
   verdict: Verdict;
   method: EntryMethod;
@@ -192,6 +197,22 @@ export interface DoorTonight {
 export interface DecideResponse {
   entry: Entry;
   tonight: DoorTonight;
+}
+
+/** entry is null when there was no admission left to take back; result is the pass as the door now sees it. */
+export interface UndoResponse {
+  entry: Entry | null;
+  result: ScanResult;
+  tonight: DoorTonight;
+}
+
+/** A member's own card: token is what its QR says, code the same thing as printed under it. */
+export interface MemberCard {
+  code: string;
+  token: string;
+  firstName: string;
+  lastName: string;
+  since: string;
 }
 
 export interface WalkInResponse {

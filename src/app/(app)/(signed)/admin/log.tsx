@@ -4,6 +4,7 @@ import { useState } from "react";
 import { FormError } from "@/components/field";
 import { RowsSkeleton } from "@/components/loading";
 import { useLive } from "@/components/use-live";
+import { DecisionChip } from "@/components/decision-chip";
 import { useI18n } from "@/i18n/provider";
 import type { EntriesResponse } from "@/lib/types";
 
@@ -94,9 +95,7 @@ export function LogTab({ night: opened = "" }: { night?: string }) {
                 <li key={entry.id} className="px-4 py-3.5">
                   <div className="flex items-start justify-between gap-3">
                     <p className="min-w-0 break-words text-[1.05rem] font-bold">{entry.personName}</p>
-                    <span className={`chip flex-none ${entry.decision === "admitted" ? "text-stamp-green" : "text-stamp-red"}`}>
-                      {entry.decision === "admitted" ? t.door.admitted : t.door.denied}
-                    </span>
+                    <DecisionChip decision={entry.decision} className="flex-none" />
                   </div>
                   <p className="mt-1 text-sm text-desk-soft">
                     <span className="tabular font-semibold text-ink">{time(entry.createdAt)}</span>
@@ -129,9 +128,7 @@ export function LogTab({ night: opened = "" }: { night?: string }) {
                       <td className="tabular px-4 py-3 text-desk-soft">{time(entry.createdAt)}</td>
                       <th scope="row" className="px-4 py-3 font-bold">{entry.personName}</th>
                       <td className="px-4 py-3">
-                        <span className={`chip ${entry.decision === "admitted" ? "text-stamp-green" : "text-stamp-red"}`}>
-                          {entry.decision === "admitted" ? t.door.admitted : t.door.denied}
-                        </span>
+                        <DecisionChip decision={entry.decision} />
                       </td>
                       <td className="px-4 py-3 text-desk-soft">
                         {t.verdict[entry.verdict]}

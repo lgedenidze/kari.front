@@ -17,8 +17,9 @@ import { AppleWalletBadge } from "./apple-wallet-badge";
 // (lib/wallet-pass.ts). It comes first there and is the only filled thing: it is the way an
 // iPhone owner expects to keep a ticket. A Wallet pass carries one fixed code, and a live
 // ticket's defence against screenshots is that its code changes every thirty seconds — so the
-// pass carries what the picture carries, the ticket's own address, and the door treats it the
-// same way: a lookup by the short code, marked "by hand".
+// pass carries the ticket's short code, and the door treats it as it treats the picture: a
+// lookup, marked "by hand". A member's pass in Wallet is their card, good every night
+// (lib/wallet-ticket.ts): it is offered with or without a ticket for tonight — see WalletLink.
 
 /** Chrome's install prompt. It fires once, early, so it is caught for the whole page. */
 type InstallPrompt = Event & { prompt: () => Promise<void> };
@@ -80,6 +81,55 @@ function rememberAdded(key: string) {
   walletListeners.forEach((listener) => listener());
 }
 
+/**
+ * Whether to offer Wallet here, and whether this phone has been offered it before.
+ * `name` is what the phone remembers the pass by: a ticket's short code, or a member's card.
+ */
+function useWalletOffer(href: string | undefined, name: string) {
+  // Known only in the browser, so it is read after the page has arrived, never guessed on the server.
+  const iphone = useSyncExternalStore(never, isIos, () => false);
+  const key = `kari.wallet.${name}`;
+  const added = useSyncExternalStore(subscribeToWallet, () => wasAdded(key), () => false);
+  return { href: iphone ? href : undefined, added, remember: () => rememberAdded(key) };
+}
+
+/** The badge — or, once it has been tapped on this phone, that it was, with the way to do it again. */
+function WalletOffer({ href, added, onAdd, last = false }: { href: string; added: boolean; onAdd: () => void; last?: boolean }) {
+  const { t } = useI18n();
+  // A plain link: the phone itself answers a pass with its own "Add" sheet.
+  return added ? (
+    <p className={`flex min-h-11 flex-wrap items-center justify-center gap-x-3 text-sm font-semibold text-ink-soft ${last ? "" : "pb-1"}`}>
+      <span className="flex items-center gap-1.5 text-go">
+        <svg viewBox="0 0 12 12" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="m2.5 6.4 2.3 2.3 4.7-5" />
+        </svg>
+        {t.ticket.walletAdded}
+      </span>
+      <a href={href} className="link">
+        {t.ticket.walletAgain}
+      </a>
+    </p>
+  ) : (
+    <a href={href} aria-label={t.ticket.wallet} className={`mx-auto block w-fit rounded-[0.55rem] active:opacity-80 ${last ? "" : "mb-4"}`} onClick={onAdd}>
+      <AppleWalletBadge />
+    </a>
+  );
+}
+
+/**
+ * "Add to Apple Wallet" by itself, where there is no ticket beside it to download: a member's
+ * card is theirs on a night they hold no pass for, and on a night the bar is closed.
+ */
+export function WalletLink({ href, name }: { href: string | undefined; name: string }) {
+  const offer = useWalletOffer(href, name);
+  if (!offer.href) return null;
+  return (
+    <div className="w-full max-w-[22rem] text-center">
+      <WalletOffer href={offer.href} added={offer.added} onAdd={offer.remember} last />
+    </div>
+  );
+}
+
 function isIos(): boolean {
   // iPadOS reports itself as a Mac; a Mac with a touch screen is an iPad.
   return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
@@ -97,6 +147,7 @@ export function SaveToPhone({
   image,
   fileName,
   wallet,
+  walletName,
 }: {
   /** Where this ticket's picture is served, e.g. "/pass/ticket.png". */
   image: string;
@@ -104,13 +155,17 @@ export function SaveToPhone({
   fileName: string;
   /** Where this ticket's Wallet pass is served, e.g. "/pass/wallet.pkpass". Absent where the server cannot make one. */
   wallet?: string;
+  /**
+   * What this phone remembers the Wallet pass by, when that is not this ticket: a member's
+   * card outlives every ticket. Otherwise the file name, which carries the ticket's short
+   * code, so each ticket is remembered by itself.
+   */
+  walletName?: string;
 }) {
   const { t } = useI18n();
-  // Known only in the browser, so it is read after the page has arrived, never guessed on the server.
-  const toWallet = useSyncExternalStore(never, isIos, () => false) && wallet;
-  // The file name carries the ticket's short code, so each ticket is remembered by itself.
-  const walletKey = `kari.wallet.${fileName}`;
-  const inWallet = useSyncExternalStore(subscribeToWallet, () => wasAdded(walletKey), () => false);
+  const offer = useWalletOffer(wallet, walletName ?? fileName);
+  const toWallet = offer.href;
+  const inWallet = offer.added;
   const canPrompt = useSyncExternalStore(subscribeToPrompt, () => installPrompt !== null, () => false);
   const standalone = useSyncExternalStore(subscribeToStandalone, isStandalone, () => false);
   const [help, setHelp] = useState<"ios" | "other" | null>(null);
@@ -198,30 +253,7 @@ export function SaveToPhone({
   return (
     <>
       <div className="w-full max-w-[22rem] space-y-2.5 text-center">
-        {/* A plain link: the phone itself answers a pass with its own "Add" sheet. */}
-        {toWallet &&
-          (inWallet ? (
-            <p className="flex min-h-11 flex-wrap items-center justify-center gap-x-3 pb-1 text-sm font-semibold text-ink-soft">
-              <span className="flex items-center gap-1.5 text-go">
-                <svg viewBox="0 0 12 12" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="m2.5 6.4 2.3 2.3 4.7-5" />
-                </svg>
-                {t.ticket.walletAdded}
-              </span>
-              <a href={toWallet} className="link">
-                {t.ticket.walletAgain}
-              </a>
-            </p>
-          ) : (
-            <a
-              href={toWallet}
-              aria-label={t.ticket.wallet}
-              className="mx-auto mb-4 block w-fit rounded-[0.55rem] active:opacity-80"
-              onClick={() => rememberAdded(walletKey)}
-            >
-              <AppleWalletBadge />
-            </a>
-          ))}
+        {toWallet && <WalletOffer href={toWallet} added={inWallet} onAdd={offer.remember} />}
         <button
           type="button"
           className={`btn w-full ${toWallet && !inWallet ? "btn-line text-paper-light" : "btn-paper"}`}

@@ -107,6 +107,11 @@ export function formatDateTime(iso: string, lang: Lang): string {
   return `${day} ${MONTHS[lang].short[month - 1]}, ${time}`;
 }
 
+/** The year of an instant on the venue's clock, e.g. "2026". */
+export function formatYear(iso: string): string {
+  return String(venueParts(iso).year);
+}
+
 /** e.g. "16 ოქტ 2026". */
 export function formatDate(iso: string, lang: Lang): string {
   const { year, month, day } = venueParts(iso);

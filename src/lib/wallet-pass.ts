@@ -1,11 +1,12 @@
 import "server-only";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { getDict } from "@/i18n";
 import { venue, type Lang } from "@/venue";
 import { buildPkpass, readCertificate, readSigner, type PassSigner } from "./pkpass";
-import type { Ticket } from "./types";
+import type { MemberCard, Ticket } from "./types";
 import { walletStrip } from "./wallet-strip";
-import { ticketKind, walletTicket } from "./wallet-ticket";
+import { ticketKind, walletCard, walletTicket } from "./wallet-ticket";
 
 // "Add to Apple Wallet". A ticket is handed over as a .pkpass, signed with the bar's Pass
 // Type ID certificate from Apple.
@@ -58,7 +59,7 @@ function materials() {
 }
 
 /** The ticket as a Wallet pass. `live` is the live ticket's own address; `doors`, when they are open that night. */
-export async function walletPass({
+export function walletPass({
   ticket,
   live,
   lang,
@@ -69,14 +70,37 @@ export async function walletPass({
   lang: Lang;
   doors?: { open: string; close: string };
 }): Promise<Response> {
+  return answer({
+    fields: walletTicket({ ticket, live, lang, doors }),
+    band: { kind: ticketKind(ticket, lang), firstName: ticket.firstName, lastName: ticket.lastName },
+    fileName: `${venue.name.toLowerCase()}-${ticket.shortCode}`,
+  });
+}
+
+/** A member's own card as a Wallet pass: the same paper ticket, with no night on it. */
+export function walletCardPass({ card, live, lang }: { card: MemberCard; live: string; lang: Lang }): Promise<Response> {
+  return answer({
+    fields: walletCard({ card, live, lang }),
+    band: { kind: getDict(lang).ticket.member, firstName: card.firstName, lastName: card.lastName },
+    fileName: `${venue.name.toLowerCase()}-member`,
+  });
+}
+
+/** Draws the band, signs the pass, and hands it over as the file an iPhone opens in Wallet. */
+async function answer({
+  fields,
+  band,
+  fileName,
+}: {
+  fields: Record<string, unknown>;
+  band: { kind: string; firstName: string; lastName: string };
+  fileName: string;
+}): Promise<Response> {
   if (!walletReady()) return new Response(null, { status: 404 });
   let pass: Buffer;
   try {
-    const [{ signer, pictures }, strip] = await Promise.all([
-      materials(),
-      walletStrip({ kind: ticketKind(ticket, lang), firstName: ticket.firstName, lastName: ticket.lastName }),
-    ]);
-    pass = buildPkpass({ pass: walletTicket({ ticket, live, lang, doors }), pictures: { ...pictures, ...strip }, signer });
+    const [{ signer, pictures }, strip] = await Promise.all([materials(), walletStrip(band)]);
+    pass = buildPkpass({ pass: fields, pictures: { ...pictures, ...strip }, signer });
   } catch (error) {
     console.error("wallet pass", error);
     return new Response(null, { status: 500 });
@@ -85,7 +109,7 @@ export async function walletPass({
     headers: {
       // This type is what makes Safari offer "Add" instead of saving a file.
       "Content-Type": "application/vnd.apple.pkpass",
-      "Content-Disposition": `attachment; filename="${venue.name.toLowerCase()}-${ticket.shortCode}.pkpass"`,
+      "Content-Disposition": `attachment; filename="${fileName}.pkpass"`,
       // One person's ticket: never a shared cache's business.
       "Cache-Control": "private, no-store",
     },

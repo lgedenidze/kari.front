@@ -6,7 +6,7 @@ import { Field, FormError } from "@/components/field";
 import { LiveTicket } from "@/components/live-ticket";
 import { TicketSkeleton } from "@/components/loading";
 import { useMe, usePoll } from "@/components/me";
-import { SaveToPhone } from "@/components/save-to-phone";
+import { SaveToPhone, WalletLink } from "@/components/save-to-phone";
 import { Stamp } from "@/components/stamp";
 import { StubCode, TicketCard } from "@/components/ticket";
 import { PassIcon } from "@/components/icons";
@@ -77,6 +77,10 @@ export function PassScreen({
   const nightLabel = tonight.title ? `${tonight.title}, ${night(tonight.night)}` : night(tonight.night);
   // The first open night after this one, by the API's own dates.
   const nextOpen = week?.find((n) => n.open && n.night > tonight.night);
+  // A member's pass in Wallet is their card: one for every night, so it is offered whether
+  // or not there is a ticket tonight, and this phone remembers it by the member, not the ticket.
+  const cardLink = wallet && me.status === "approved" ? "/pass/wallet.pkpass" : undefined;
+  const cardName = `card-${me.id}`;
 
   return (
     <div className="flex flex-1 flex-col items-center gap-6">
@@ -87,6 +91,7 @@ export function PassScreen({
             image="/pass/ticket.png"
             fileName={`${venue.name.toLowerCase()}-${ticket.shortCode}`}
             wallet={wallet ? "/pass/wallet.pkpass" : undefined}
+            walletName={cardLink ? cardName : undefined}
           />
         </>
       ) : me.status === "banned" ? (
@@ -153,6 +158,9 @@ export function PassScreen({
           </div>
         </TicketCard>
       )}
+
+      {/* No ticket to save tonight, and the card is still theirs to keep. */}
+      {!ticket && <WalletLink href={cardLink} name={cardName} />}
 
       {failure && (
         <div className="w-full">

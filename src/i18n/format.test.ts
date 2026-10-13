@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { errorText, fill, formatDate, formatDateTime, formatNight, formatTime, getDict } from "./index";
+import { errorText, fill, formatDate, formatDateTime, formatNight, formatTime, formatYear, getDict } from "./index";
 import { en } from "./en";
 import { ka } from "./ka";
 
@@ -50,6 +50,9 @@ describe("dates", () => {
     expect(formatDateTime("2026-10-16T21:30:00Z", "en")).toBe("17 Oct, 01:30");
     expect(formatDateTime("2026-10-16T19:41:00Z", "ka")).toBe("16 ოქტ, 23:41");
     expect(formatDate("2026-10-16T19:41:00Z", "ka")).toBe("16 ოქტ 2026");
+    // The year turns four hours early.
+    expect(formatYear("2026-12-31T19:59:00Z")).toBe("2026");
+    expect(formatYear("2026-12-31T20:00:00Z")).toBe("2027");
   });
 });
 

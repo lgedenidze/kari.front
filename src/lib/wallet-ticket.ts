@@ -24,10 +24,16 @@
 //
 // The pass goes grey by itself when its night is over (expirationDate), and it cannot be
 // passed on from Wallet's own share sheet (sharingProhibited): it has a name on it.
+//
+// A member's card (walletCard, below) is the same pass with no night on it. A ticket is for
+// one night and a guest adds it for that night; a member adds their card once and it is good
+// every night, because what it carries is not a ticket's code but the member's own
+// ("KM.<code>"). The door reads that as the member, with their photo — and as nothing at
+// all the minute the bar suspends them. It never goes grey: there is no date for it to pass.
 
-import { fill, formatNight, formatTime, getDict } from "@/i18n";
+import { fill, formatNight, formatTime, formatYear, getDict } from "@/i18n";
 import { venue, type Lang } from "@/venue";
-import type { Ticket } from "./types";
+import type { MemberCard, Ticket } from "./types";
 
 // The app's own colours (app/globals.css). The ink is also the ground of the band picture,
 // to the digit — see lib/wallet-strip.tsx.
@@ -89,6 +95,49 @@ export function walletTicket({
       backFields: [
         { key: "name", label: kind, value: name },
         { key: "door", label: t.ticket.showAtDoor, value: t.ticket.walletDoor },
+        { key: "live", label: t.ticket.walletLive, value: live },
+        { key: "credit", label: t.common.poweredBy, value: venue.poweredBy.href },
+      ],
+    },
+  };
+}
+
+/** A member's own card: good every night, for as long as they are a member. */
+export function walletCard({
+  card,
+  live,
+  lang,
+}: {
+  card: MemberCard;
+  /** Where the member's live pass is, for the back of the card. */
+  live: string;
+  lang: Lang;
+}): Record<string, unknown> {
+  const t = getDict(lang);
+  const name = `${card.firstName} ${card.lastName}`;
+
+  return {
+    // One card per member, whatever is drawn on it: adding it again replaces the one in Wallet.
+    serialNumber: `card-${card.code}`,
+    organizationName: venue.name,
+    description: `${venue.name}, ${t.ticket.walletCard}, ${name}`,
+    backgroundColor: INK,
+    foregroundColor: PAPER_LIGHT,
+    labelColor: INK_SOFT,
+    sharingProhibited: true,
+    // The code under the picture is the part staff can type into Find.
+    barcodes: [{ format: "PKBarcodeFormatQR", message: card.token, messageEncoding: "iso-8859-1", altText: card.code }],
+    eventTicket: {
+      // Where a ticket has its date.
+      headerFields: [{ key: "valid", label: t.ticket.walletValid, value: t.ticket.walletEveryNight }],
+      secondaryFields: [
+        { key: "since", label: t.ticket.walletSince, value: fill(t.ticket.walletSinceYear, { year: formatYear(card.since) }) },
+        { key: "maker", label: t.common.poweredBy, value: venue.poweredBy.label, textAlignment: "PKTextAlignmentRight" },
+      ],
+      auxiliaryFields: [],
+      backFields: [
+        { key: "name", label: t.ticket.walletCard, value: name },
+        { key: "door", label: t.ticket.showAtDoor, value: t.ticket.walletCardDoor },
         { key: "live", label: t.ticket.walletLive, value: live },
         { key: "credit", label: t.common.poweredBy, value: venue.poweredBy.href },
       ],

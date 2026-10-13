@@ -24,6 +24,9 @@ describe("the QR on a saved ticket", () => {
 
   it("is not fooled by a live pass code, another page, or anything else", () => {
     expect(savedTicketCode("K1.0123456789ABCDEF.01234567")).toBeNull();
+    // A member's card is not a ticket's short code: it goes to the scanner's own check,
+    // which knows whose it is.
+    expect(savedTicketCode("KM.7K2M9QX")).toBeNull();
     expect(savedTicketCode("https://nisli.ge/pass")).toBeNull();
     expect(savedTicketCode("https://nisli.ge/admin?c=1AD0H6")).toBeNull();
     expect(savedTicketCode("https://nisli.ge/pass?c=<script>")).toBeNull();
