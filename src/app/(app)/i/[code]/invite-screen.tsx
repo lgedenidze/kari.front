@@ -5,6 +5,7 @@ import { useCallback, useState } from "react";
 import { FormError } from "@/components/field";
 import { LiveTicket } from "@/components/live-ticket";
 import { usePoll } from "@/components/me";
+import { SaveToPhone } from "@/components/save-to-phone";
 import { StubCode, TicketCard } from "@/components/ticket";
 import { useI18n } from "@/i18n/provider";
 import { api, isApiError } from "@/lib/api";
@@ -74,6 +75,7 @@ export function InviteScreen({ code }: { code: string }) {
     return (
       <div className="flex w-full flex-col items-center gap-5">
         <LiveTicket ticket={data.ticket} serverTime={data.serverTime} tonight={data.tonight} />
+        <SaveToPhone />
         <p className="text-center text-sm text-ink-soft">{t.ticket.keepPage}</p>
         {failure && (
           <div className="w-full">

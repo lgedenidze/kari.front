@@ -105,7 +105,8 @@ test("a guest joins, the bar approves, the door scans and admits, and it is in t
 
   // 7. The decision is in the admin's door log.
   await admin.goto("/admin#log");
-  const row = admin.getByRole("row", { name: new RegExp(`${first} ${last}`) });
+  // The tests run at phone size, where the log is a list of records rather than a table.
+  const row = admin.locator("main li", { hasText: `${first} ${last}` });
   await expect(row).toContainText("Admitted");
   await expect(row).toContainText("Door Staff");
 
@@ -270,13 +271,24 @@ test("an admin names a night, and members see it by name", async ({ browser }) =
   await special.click();
   await expect(member.locator("[aria-live='polite']", { hasText: title })).toContainText("Doors at ten");
 
-  // The admin edits it, then removes it: the night goes back to the plain schedule.
+  // The admin opens it for editing: the form starts from what was saved.
   // (Once the form is open the name is a field's value, not text, so the card is found by
   // its form rather than by its title.)
   await named.getByRole("button", { name: "Edit" }).click();
   const editor = admin.locator("#special-nights + ul form");
   await expect(editor.getByLabel("Name of the night")).toHaveValue(title);
-  await editor.getByRole("button", { name: "Back to the schedule" }).click();
+  await editor.getByRole("button", { name: "Cancel" }).click();
+
+  // Deleting asks once, and "Keep it" really keeps it.
+  await named.getByRole("button", { name: "Delete", exact: true }).click();
+  await expect(named.getByRole("alertdialog")).toContainText("It goes back to the weekly schedule.");
+  await named.getByRole("button", { name: "Keep it" }).click();
+  await expect(named).toBeVisible();
+
+  // Deleting for real: the night leaves the named list and returns to the plain schedule.
+  await named.getByRole("button", { name: "Delete", exact: true }).click();
+  await named.getByRole("button", { name: "Delete night" }).click();
   await expect(admin.locator("#special-nights + ul li", { hasText: title })).toHaveCount(0);
-  await expect(editor).toHaveCount(0);
+  const stillNamed = (await (await admin.request.get("/api/admin/nights")).json()) as { night: string; title: string | null }[];
+  expect(stillNamed.find((n) => n.night === date)?.title ?? null).toBeNull();
 });

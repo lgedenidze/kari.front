@@ -19,7 +19,9 @@ export function VenueMark({ className = "" }: { className?: string }) {
  * because at these sizes it would be an unreadable smudge.
  */
 export function WoxLogo({ height = 18, className = "" }: { height?: number; className?: string }) {
-  const LETTERS = 0.6; // the share of the artwork's height the three letters take up
+  // The share of the artwork's height shown. Measured on the file: the letters end 71% of the
+  // way down and the "POS SYSTEM" line starts at 83%. Cutting at 60% sliced the letters' feet off.
+  const LETTERS = 0.745;
   const width = (height / LETTERS) * (1508 / 584);
   return (
     <span
@@ -78,13 +80,20 @@ export function WoxCredit({ label, className = "" }: { label: string; className?
   );
 }
 
-/** Switches between the two public landing pages. The language is in the URL there. */
+/**
+ * Switches between the two public landing pages. The language is in the URL there.
+ * On a phone it is a two-letter code, to leave the row to the bar's name.
+ */
 export function SiteLangLink({ lang, path = "" }: { lang: Lang; path?: string }) {
   const other: Lang = lang === "ka" ? "en" : "ka";
   const href = other === "en" ? `/en${path}` : path || "/";
+  const name = other === "en" ? "English" : "ქართული";
   return (
-    <a href={href} hrefLang={other} lang={other} className="btn btn-line btn-small">
-      {other === "en" ? "English" : "ქართული"}
+    <a href={href} hrefLang={other} lang={other} aria-label={name} className="btn btn-line btn-small !px-3 sm:!px-3.5">
+      <span className="sm:hidden" aria-hidden="true">
+        {other === "en" ? "EN" : "ქარ"}
+      </span>
+      <span className="hidden sm:inline">{name}</span>
     </a>
   );
 }

@@ -39,8 +39,12 @@ The session is an httpOnly cookie set by the API. This app never sees a token.
   - `requireMe(returnTo, roles?)` — redirects to `/login?next=…` when signed out, and to `/pass`
     when the role is not allowed.
 - `/door` requires `staff` or `admin`. `/admin` requires `admin`.
-- `(member)/layout.tsx` wraps pass, invites and profile in the dock. It does not redirect; each
-  page calls `requireMe` with its own path so the visitor returns to exactly that page.
+- `(signed)/layout.tsx` wraps every signed-in screen — pass, invites, profile, door, admin — in
+  the account provider and the dock. It is the reason the dock never unmounts, and so can slide
+  its marker between any two places. It does not redirect; each page calls `requireMe` with its
+  own path and roles, so the visitor returns to exactly that page.
+- `(signed)/(member)/layout.tsx` adds the top bar and the phone-width column for the pass,
+  invites and profile.
 - `/login` only ever redirects to a path on this site (`safeNext`).
 - Client components get the account from `useMe()` (`components/me.tsx`).
 
@@ -65,6 +69,19 @@ Browser code uses `lib/api.ts`: `api.get/post/put/patch/delete`. A failure is an
 with `status`, `code` and `fields`. Show `error(code)` from `useI18n()`; show a field's code
 next to the field.
 
+## Arriving on a screen
+
+A page here waits for the server to say who is signed in before it can render, and the API is
+far away. So nothing may depend on that wait to feel responsive:
+
+- **The dock answers the tap itself.** Its marker moves at once (`Dock` remembers the tap
+  together with the page it was made on, and forgets it when the address changes).
+- **Every signed-in route has a `loading.tsx`** that shows the shape of what is coming: a
+  ticket outline, rows, or the stamp loader — on the right ground colour, so there is no flash.
+- **The screen eases in** (`.page-in`, keyed by the address in `signed-chrome.tsx`).
+- In-screen loads use the same skeletons from `components/loading.tsx`, never the bare word
+  "loading" on an empty page.
+
 ## Live data
 
 There are no websockets. Screens that must stay current poll with `usePoll` (`components/me.tsx`),
@@ -81,7 +98,9 @@ which only runs while the tab is visible:
 ## SEO
 
 `lib/site-meta.ts` builds the metadata for public pages: title, description, canonical,
-`hreflang` alternates, Open Graph. `sitemap.ts` lists the public pages with their language
+`hreflang` alternates, Open Graph. The home-screen manifest is served by route handlers, not a `manifest.ts` file: file-based
+metadata cannot be overridden per page, and an invite or a door ticket must save to the home
+screen as *itself* (`lib/web-manifest.ts`). `sitemap.ts` lists the public pages with their language
 alternates. `robots.ts` allows only those. App pages carry `noindex`. The landing page embeds
 `BarOrPub` structured data.
 

@@ -1,6 +1,11 @@
 import { TopBar } from "@/components/app-chrome";
 import { InviteScreen } from "./invite-screen";
 
+// Saved to a home screen, this page must reopen as this invite — see lib/web-manifest.ts.
+export async function generateMetadata({ params }: { params: Promise<{ code: string }> }) {
+  return { manifest: `/i/${(await params).code}/manifest.webmanifest` };
+}
+
 // The invite link. It works with no account: the guest opens it, answers, and holds a ticket.
 export default async function Page({ params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;

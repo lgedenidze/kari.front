@@ -32,17 +32,20 @@ src/
     (en)/en/             English public pages:  /en, /en/privacy   — static
     (app)/               everything behind sign-in                 — rendered per request
       join/ login/
-      (member)/pass/ invites/ profile/
       i/[code]/          an invite link — works with no account
       t/[token]/         a ticket issued at the door — works with no account
-      door/              the scanner (staff, admin)
-      admin/             the back office (admin)
+      (signed)/          one layout for every signed-in screen: the account and the dock
+        (member)/pass/ invites/ profile/
+        door/            the scanner (staff, admin)
+        admin/           the back office (admin)
     api/[...path]/       passes every /api/* call on to the .NET API
-    sitemap.ts robots.ts manifest.ts icon.svg
-  components/            ticket, live-ticket, stamp, qr, night-picker, app-chrome (dock), brand, icons
+    manifest.webmanifest/  the home-screen manifest; invite and ticket pages serve their own
+    sitemap.ts robots.ts icon.svg apple-icon.png
+  components/            ticket, live-ticket, stamp, qr, night-picker, app-chrome (dock), brand, icons,
+                         loading (skeletons), save-to-phone
   i18n/                  en.ts, ka.ts, formatters, provider
-  lib/                   api (browser), server-api (server), pass-code, types, photo
-e2e/                     playwright flows
+  lib/                   api (browser), server-api (server), pass-code, scan-presence, web-manifest, types, photo
+e2e/                     playwright flows; phone-audit.mjs photographs every screen at phone size
 ```
 
 **Before working on an area, read its page under [`docs/domains/`](docs/domains/README.md).**
@@ -68,6 +71,13 @@ e2e/                     playwright flows
 - **Do not call `setState` synchronously in an effect.** The lint rule forbids it. Derive the
   value, or set it from a promise or an event. See `scanner.tsx` and `live-ticket.tsx`.
 - **No stamp, badge or overlay on a QR code.** It breaks the scan.
+- **Check every screen at phone size before calling UI work done:** `node e2e/phone-audit.mjs 360`
+  photographs all of them into `test-results/phone/` and reports any that scroll sideways.
+  `node e2e/find-overflow.mjs <path>` names the element at fault.
+- **Georgian needs room.** Words are long ("კონფიდენციალურობა") and letters hang low (ვ, ფ, პ).
+  Titles use the fluid `.title` size; never clip a line of Georgian with a tight `leading-none`.
+- **iOS date and time inputs ignore `width: 100%`** unless their native appearance is removed.
+  `.input` handles it; use `.input` on every field.
 
 ## Design in one paragraph
 

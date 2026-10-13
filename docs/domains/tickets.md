@@ -50,14 +50,18 @@ The stamp lands beside the name. **Never on the QR.**
 
 ## The pass page
 
-`(member)/pass/pass-screen.tsx`. What it shows depends on the account:
+`(signed)/(member)/pass/pass-screen.tsx`. What it shows depends on the account:
 
 - a ticket for tonight, if there is one — whatever the account's status (a guest may hold one
   from an invite);
-- `approved` and open tonight → the button to claim tonight's pass;
-- `approved` and closed tonight → closed;
-- `pending` → "your request is with the bar", with a grey stamp. The page polls and changes by
-  itself when the bar answers;
+- `approved` and open tonight → the pass **before it is printed**: the same ticket, with the
+  member's name and tonight on it, a dashed window where the code will be, and the button that
+  prints it. A first visit shows what they are about to hold, not a paragraph about it;
+- `approved` and closed tonight → the same ticket, saying closed;
+- `pending` → "your request is with the bar", with a grey stamp, the three steps (sent, in
+  review, pass), and the Facebook link that was sent with a way to change it — a mistyped link
+  is the usual reason a request sits unanswered. The page polls and changes by itself when the
+  bar answers;
 - `rejected` → the bar's note, and a form to fix the Facebook link and ask again;
 - `guest` → a form to ask for membership;
 - `banned` → suspended.
@@ -66,7 +70,7 @@ Below: invites waiting, passes for coming nights, and the count of nights so far
 
 ## Invites
 
-`(member)/invites/invites-screen.tsx`.
+`(signed)/(member)/invites/invites-screen.tsx`.
 
 - **For you** — invites addressed to this account. Accept, decline, or open the ticket.
 - **From you** — if the member may invite: the form, then the list of sent invites with their
@@ -96,6 +100,22 @@ it does not generate dates.
 - Accepted: the live ticket, and "keep this page — it is your ticket".
 - The personal number is masked here. The link can be forwarded.
 - The member who sent it sees its state and a link to manage invites — never the guest's QR.
+
+## Save to phone
+
+`components/save-to-phone.tsx`, under every live ticket. It puts the ticket on the home screen,
+where it opens like an app.
+
+- Android and desktop Chrome: the browser's own install dialog (`beforeinstallprompt`).
+- iPhone: Safari has nothing to call, so a sheet shows the taps, with the Share glyph.
+- Already running from the home screen: the button is not shown.
+- An invite link and a door ticket each serve **their own manifest**, so the saved icon opens
+  that ticket and not the members' pass page.
+
+It is deliberately not "Add to Apple/Google Wallet". A Wallet pass carries one fixed barcode;
+this ticket's defence against screenshots is that its code changes every thirty seconds.
+Real Wallet passes would also need an Apple Pass Type certificate and a Google Wallet issuer
+account. Google Wallet does support rotating barcodes, so that route is open if the bar wants it.
 
 ## Watch out
 

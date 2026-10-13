@@ -5,7 +5,7 @@ the dark, in seconds; the back office sitting down, in daylight, for minutes.
 
 ## The door — `/door`
 
-`(app)/door/door-screen.tsx`, `scanner.tsx`. Staff and admins only.
+`(signed)/door/door-screen.tsx`, `scanner.tsx`. Staff and admins only.
 
 ### Layout
 
@@ -19,8 +19,19 @@ the dark, in seconds; the back office sitting down, in daylight, for minutes.
 
 - Chrome on Android reads them natively (`BarcodeDetector`). Everywhere else, frames are decoded
   by `jsqr`, loaded only when needed, on a frame scaled to 640px.
-- The same code held in front of the camera is reported once every 4 seconds, not seven times a second.
+- **One read per showing** (`lib/scan-presence.ts`). A code is read once. To be read again it
+  must leave the frame for 1.5 seconds and come back. A pass is known by its id, not by the
+  code it is showing, so a pass that rotates while held up is still the same showing. When
+  reading resumes after a result, the pass just decided counts as still present — otherwise
+  it is read again the moment staff tap Admit ([BUG-0002](../bugs/0002-scanner-reads-the-same-pass-twice.md)).
+- Only the middle square of the picture is decoded: faster, and a second phone at the edge is
+  not read by accident.
+- The instant a code is read the scanner says "checking…" and the corners turn green, before
+  the server answers. On a slow connection this is what stops staff waving the phone about.
+- A QR that is not a pass gets a short notice under the camera, not a full-screen result.
 - The camera keeps running while a result is up but stops reading, so it is ready at once.
+- The screen is kept awake; the camera is started again if the phone took it away; a torch
+  button appears where the device has one.
 - A blocked or missing camera says so, and points to Find.
 - **The camera needs https.** On plain http (other than localhost) browsers refuse.
 
@@ -59,7 +70,7 @@ Tonight's last 40 decisions.
 
 ## The back office — `/admin`
 
-`(app)/admin/`. Admins only. A light "desk" theme, set on the page root with `--ground`.
+`(signed)/admin/`. Admins only. A light "desk" theme, set on the page root with `--ground`.
 
 One page, six tabs. The tab is kept in the address (`#requests`), so a refresh or a shared link
 lands in the same place.
@@ -68,9 +79,9 @@ lands in the same place.
 |---|---|---|
 | Tonight | `overview.tsx` | Requests waiting; inside, passes, turned away, members; the last 14 nights as a table. |
 | Requests | `requests.tsx` | The review queue, oldest first. Open the Facebook profile, add a note, approve or reject. |
-| People | `people.tsx` | Search and filter. A person's page: status, role, inviting, quota, notes for the door, password reset, door history. |
+| People | `people.tsx` | Rows to tap on a phone, a table on a desk. Search and filter. A person's page: status, role, inviting, quota, notes for the door, password reset, door history. |
 | Nights | `nights.tsx` | "Add a night" for any date; named and changed nights by name; the next three weeks. |
-| Door log | `log.tsx` | Every decision on one night. |
+| Door log | `log.tsx` | Every decision on one night: records on a phone, a table on a desk. |
 | Settings | `settings.tsx` | Opening days, door hours, the cutoff, capacity, invite defaults. |
 
 ### Nights
@@ -78,7 +89,8 @@ lands in the same place.
 Two jobs, kept apart on purpose:
 
 - **Add a night** — pick any date from tonight on, give it a name, a note, a capacity, or close
-  it. Named nights show to guests by name on the pass, the invite calendar and the ticket.
+  it. A named night can be edited or **deleted**; deleting asks once, in place, and puts the
+  night back on the weekly schedule. Named nights show to guests by name on the pass, the invite calendar and the ticket.
 - **The next three weeks** — the plain schedule, where any single night can be edited.
 
 A night that has been named or changed is listed at the top, even when it is months ahead.

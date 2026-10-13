@@ -1,6 +1,11 @@
 import { TopBar } from "@/components/app-chrome";
 import { TicketScreen } from "./ticket-screen";
 
+// Saved to a home screen, this page must reopen as this ticket — see lib/web-manifest.ts.
+export async function generateMetadata({ params }: { params: Promise<{ token: string }> }) {
+  return { manifest: `/t/${(await params).token}/manifest.webmanifest` };
+}
+
 // A ticket issued at the door. Staff show the walk-in a QR of this address; whoever opens it
 // holds the ticket, with no account.
 export default async function Page({ params }: { params: Promise<{ token: string }> }) {

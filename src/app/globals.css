@@ -59,6 +59,19 @@
     font-size: 1rem;
     line-height: 1.55;
     -webkit-font-smoothing: antialiased;
+    /* Nothing decorative may make a phone scroll sideways. */
+    overflow-x: clip;
+  }
+
+  /* The browser paints the body colour behind its own toolbars and when a page is pulled past
+     its end. A screen on another ground says so with a class, and the body follows it. */
+  body:has(.ground-desk) {
+    --ground: var(--color-desk);
+    background: var(--color-desk);
+  }
+  body:has(.ground-deep) {
+    --ground: var(--color-ink-deep);
+    background: var(--color-ink-deep);
   }
 
   /* One family, two widths. Headlines use the condensed cut — in Georgian and in Latin. */
@@ -70,6 +83,9 @@
     line-height: 1.02;
     letter-spacing: -0.005em;
     text-wrap: balance;
+    /* Georgian builds long words ("კონფიდენციალურობა"). A headline breaks inside one rather
+       than push the page wider than the phone. */
+    overflow-wrap: anywhere;
   }
 
   h3 {
@@ -216,6 +232,28 @@
   }
   .input::placeholder {
     color: #8a8fae;
+  }
+
+  /* iOS Safari sizes date and time fields by their own content and ignores width: 100% — a
+     "21:00" field then runs off the right of the screen and the whole page scrolls sideways.
+     Taking away its native appearance makes it obey like any other field. */
+  input[type="date"].input,
+  input[type="time"].input {
+    -webkit-appearance: none;
+    appearance: none;
+    min-width: 0;
+    max-width: 100%;
+  }
+  input[type="date"].input::-webkit-date-and-time-value,
+  input[type="time"].input::-webkit-date-and-time-value {
+    text-align: left;
+    min-height: 1.5em;
+  }
+
+  /* A grid or flex child will not shrink below its content unless told it may. A field's
+     wrapper must be allowed to, or one stubborn input widens the page. */
+  :where(label, div, fieldset):has(> .input) {
+    min-width: 0;
   }
   .input:focus-visible {
     outline: 3px solid var(--color-stamp-blue);
@@ -383,6 +421,56 @@
     right: -0.35rem;
   }
 
+  /* The title of a screen. It shrinks with the phone, so a one-word Georgian title such as
+     "მოწვევები" or "კონფიდენციალურობა" still fits on a 360px screen. */
+  .title {
+    font-size: clamp(2.1rem, 10.5vw, 3rem);
+  }
+
+  /* A row that scrolls sideways on purpose (the back-office tabs): no scrollbar, and its far
+     edge fades out so it is plain there is more. */
+  .scroll-row {
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent);
+  }
+  .scroll-row::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* ---------- arriving and waiting ---------- */
+
+  /* A screen eases in when it is navigated to. Short, and only a few pixels: enough to read
+     as "this is new", not enough to make anyone wait. */
+  .page-in {
+    animation: page-in 240ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
+  }
+
+  /* A placeholder in the shape of what is coming, with a light sweeping across it. It takes
+     its tint from the text colour, so it works on ink, on paper and on the desk alike. */
+  .skeleton {
+    position: relative;
+    display: inline-block;
+    overflow: hidden;
+    border-radius: 0.6rem;
+    background: color-mix(in srgb, currentColor 13%, transparent);
+  }
+  .skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.32), transparent);
+    animation: sweep 1.25s ease-in-out infinite;
+  }
+
+  /* A stamp being inked: the ring draws itself round. */
+  .stamp-loader-ring {
+    transform-origin: 50% 50%;
+    animation: spin 0.95s linear infinite;
+  }
+
   /* ---------- small pieces ---------- */
   .chip {
     display: inline-flex;
@@ -440,6 +528,29 @@
   }
 }
 
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes sweep {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @keyframes pulse-line {
   0%,
   100% {
@@ -452,8 +563,13 @@
 
 @media (prefers-reduced-motion: reduce) {
   .stamp-thump,
-  .rise {
+  .rise,
+  .page-in,
+  .skeleton::after {
     animation: none;
+  }
+  .stamp-loader-ring {
+    animation-duration: 2.4s;
   }
   .btn,
   .tab-stub {

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useI18n } from "@/i18n/provider";
 import { LANG_COOKIE, type Lang } from "@/venue";
 import { VenueMark } from "./brand";
@@ -44,7 +44,7 @@ export function LangToggle({ className = "" }: { className?: string }) {
 /** The quiet top bar on every app screen: the venue's name, and the language. */
 export function TopBar({ right }: { right?: ReactNode }) {
   return (
-    <header className="flex items-center justify-between gap-3 px-5 pt-5">
+    <header className="flex items-center justify-between gap-3 px-5 pt-[max(1.1rem,env(safe-area-inset-top))]">
       <Link href="/" aria-label="NISLI">
         <VenueMark className="text-[0.95rem]" />
       </Link>
@@ -73,7 +73,12 @@ export function Dock({ role, invitesWaiting = 0 }: { role: UserRole; invitesWait
     ...(role === "admin" ? [{ href: "/admin", label: t.admin.short, icon: OfficeIcon, badge: 0 }] : []),
     { href: "/profile", label: t.profile.title, icon: ProfileIcon, badge: 0 },
   ];
-  const current = tabs.findIndex((tab) => pathname.startsWith(tab.href));
+  // Where the marker sits. A tap moves it at once — the page may take a moment to arrive, and
+  // a bar that does not answer the finger feels broken. The tap is remembered together with
+  // the page it was made on, so it stops counting by itself as soon as the address changes.
+  const [tapped, setTapped] = useState<{ href: string; from: string } | null>(null);
+  const shown = tapped && tapped.from === pathname ? tapped.href : pathname;
+  const current = tabs.findIndex((tab) => shown.startsWith(tab.href));
   const count = tabs.length;
 
   return (
@@ -99,8 +104,9 @@ export function Dock({ role, invitesWaiting = 0 }: { role: UserRole; invitesWait
               <li key={tab.href}>
                 <Link
                   href={tab.href}
+                  onClick={() => setTapped({ href: tab.href, from: pathname })}
                   aria-current={active ? "page" : undefined}
-                  className={`flex h-[3.6rem] flex-col items-center justify-center gap-0.5 rounded-[1.2rem] px-0.5 text-[0.72rem] font-bold leading-none transition-colors duration-200 ${
+                  className={`flex h-[3.75rem] flex-col items-center justify-center rounded-[1.2rem] px-0.5 pt-0.5 text-[0.72rem] font-bold transition-colors duration-200 ${
                     active ? "text-ink-deep" : "text-ink-soft hover:text-paper-light"
                   }`}
                 >
@@ -112,8 +118,10 @@ export function Dock({ role, invitesWaiting = 0 }: { role: UserRole; invitesWait
                       </span>
                     )}
                   </span>
-                  {/* The condensed cut, like the headlines: five labels fit a 360px phone. */}
-                  <span className="max-w-full truncate" style={{ fontVariationSettings: '"wdth" 78' }}>
+                  {/* The condensed cut, like the headlines: five labels fit a 360px phone.
+                      The line is tall on purpose: Georgian letters hang well below it (ვ, ფ, პ),
+                      and a tight, clipped line cuts their tails off. */}
+                  <span className="max-w-full truncate leading-[1.5]" style={{ fontVariationSettings: '"wdth" 78' }}>
                     {tab.label}
                   </span>
                 </Link>

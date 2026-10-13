@@ -69,7 +69,8 @@ admin also gets Office. The same dock is on the door and admin screens, so every
 tap from every other.
 
 The current place is a paper ticket stub (`.tab-stub`) with the same side notches as every
-ticket. It slides to the tab that is tapped. A result or a form at the door covers the dock, so
+ticket. It slides to the tab that is tapped — at once, before the page has arrived. The dock is
+built once, in `(signed)/layout.tsx`, and never unmounts; that is what lets it slide. A result or a form at the door covers the dock, so
 nobody leaves a decision by accident.
 
 ## Rules
@@ -91,8 +92,10 @@ nobody leaves a decision by accident.
 
 The app doubles as marketing for Wox, quietly. Present placements:
 
-- the landing header — the bar's name × the Wox wordmark (`WoxLogo`, Wox's own artwork used as a mask);
-- the hero — a pale "WOX.GE" maker's seal beside the ticket;
+- the landing header — the bar's name with the Wox wordmark (`WoxLogo`, Wox's own artwork used
+  as a mask): stacked as "powered by WOX" on a phone, side by side with a × from a tablet up;
+- the hero — a pale "WOX.GE" maker's seal: beside the headline on phones and tablets (floated
+  with a round outline so the headline runs round it), beside the ticket on wide screens;
 - the foot of the landing page, and a second seal by the closing button;
 - the stub of every pass and ticket (`WoxCredit`, with the real Wox mark);
 - under the sign-up and sign-in forms; the foot of the door and admin screens.

@@ -22,6 +22,8 @@ export function siteMetadata(lang: Lang, path: "" | "/privacy", pageTitle?: stri
     title,
     description: t.landing.metaDescription,
     applicationName: venue.name,
+    manifest: "/manifest.webmanifest",
+    appleWebApp: { capable: true, title: venue.name, statusBarStyle: "black-translucent" },
     alternates: {
       canonical: lang === "en" ? en : ka,
       languages: { ka, en, "x-default": ka },
@@ -44,4 +46,6 @@ export const appMetadata: Metadata = {
   metadataBase: new URL(venue.url),
   title: { default: venue.name, template: `%s — ${venue.name}` },
   robots: { index: false, follow: false },
+  manifest: "/manifest.webmanifest",
+  appleWebApp: { capable: true, title: venue.name, statusBarStyle: "black-translucent" },
 };
