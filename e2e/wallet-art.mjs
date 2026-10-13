@@ -10,6 +10,12 @@
 //
 // The sizes are Apple's (points): icon 29x29, logo at most 160x50. Run it again when the
 // mark, the name or the stamp changes:   node e2e/wallet-art.mjs
+//
+// And one picture for Google Wallet, into public/wallet/, because Google does not take a
+// picture inside a pass: it fetches it from the site.
+//
+//   google-logo   the app's mark on its ink, 660 by 660 as Google asks. Google cuts it to
+//                 a circle, so the ink runs to the edges and the ticket keeps to the middle.
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -17,6 +23,7 @@ import { chromium } from "@playwright/test";
 
 const web = join(dirname(fileURLToPath(import.meta.url)), "..");
 const out = join(web, "assets/wallet");
+const site = join(web, "public/wallet");
 const mark = readFileSync(join(web, "src/app/icon.svg"), "utf8");
 const font = (file) => readFileSync(join(web, "assets/fonts", file)).toString("base64");
 
@@ -27,6 +34,7 @@ const nameKa = /nameKa: "([^"]+)"/.exec(venueSource)[1];
 const maker = /label: "([^"]+)"/.exec(venueSource)[1].toUpperCase();
 
 // The app's own colours (src/app/globals.css).
+const INK = "#14235e";
 const PAPER = "rgb(244, 212, 215)"; // the ticket on the band (src/lib/wallet-strip.tsx)
 const PAPER_LIGHT = "#fbecee";
 const STAMP_BLUE = "#2447d8";
@@ -96,6 +104,19 @@ const pictures = [
       <span class="logo" id="art">${ticket}<span class="latin">${name}</span><span class="georgian">${nameKa}</span></span>`,
   },
   {
+    // Whole, with its ground: Google lays it on nothing of ours, and cuts it round.
+    name: "google-logo",
+    folder: site,
+    scales: [1],
+    width: 660,
+    height: 660,
+    html: `<style>${base}
+        .ground { display: grid; place-items: center; width: 660px; height: 660px; background: ${INK}; }
+        .ground svg { display: block; width: 258px; height: 340px; }
+      </style>
+      <div class="ground">${ticket}</div>`,
+  },
+  {
     // On the ticket's own paper, so it lies on the band without an edge. One size: the band is
     // drawn at three, and scales this.
     name: "stamp",
@@ -119,10 +140,10 @@ for (const picture of pictures) {
     if (await art.count()) {
       const box = await art.boundingBox();
       if (box.width > 160) throw new Error(`${picture.name} is ${box.width} points wide; Apple allows 160`);
-      await art.screenshot({ path: join(out, file), omitBackground: true });
+      await art.screenshot({ path: join(picture.folder ?? out, file), omitBackground: true });
       console.log(`${file}  ${Math.round(box.width)}x${Math.round(box.height)} pt`);
     } else {
-      await page.screenshot({ path: join(out, file), omitBackground: true });
+      await page.screenshot({ path: join(picture.folder ?? out, file), omitBackground: true });
       console.log(`${file}  ${picture.width}x${picture.height} pt`);
     }
     await page.close();

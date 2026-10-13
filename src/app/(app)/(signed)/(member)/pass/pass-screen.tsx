@@ -30,11 +30,14 @@ export function PassScreen({
   first,
   week = null,
   wallet = false,
+  google = false,
 }: {
   first: TonightResponse | null;
   week?: NightInfo[] | null;
   /** Whether this server can make an Apple Wallet pass (lib/wallet-pass.ts). */
   wallet?: boolean;
+  /** Whether this server can offer a pass to Google Wallet (lib/google-wallet.ts). */
+  google?: boolean;
 }) {
   const { t, fill, night } = useI18n();
   const { me, setMe, refresh } = useMe();
@@ -79,7 +82,9 @@ export function PassScreen({
   const nextOpen = week?.find((n) => n.open && n.night > tonight.night);
   // A member's pass in Wallet is their card: one for every night, so it is offered whether
   // or not there is a ticket tonight, and this phone remembers it by the member, not the ticket.
-  const cardLink = wallet && me.status === "approved" ? "/pass/wallet.pkpass" : undefined;
+  const member = me.status === "approved";
+  const cardLink = wallet && member ? "/pass/wallet.pkpass" : undefined;
+  const googleCardLink = google && member ? "/pass/google-wallet" : undefined;
   const cardName = `card-${me.id}`;
 
   return (
@@ -91,7 +96,8 @@ export function PassScreen({
             image="/pass/ticket.png"
             fileName={`${venue.name.toLowerCase()}-${ticket.shortCode}`}
             wallet={wallet ? "/pass/wallet.pkpass" : undefined}
-            walletName={cardLink ? cardName : undefined}
+            google={google ? "/pass/google-wallet" : undefined}
+            walletName={member ? cardName : undefined}
           />
         </>
       ) : me.status === "banned" ? (
@@ -160,7 +166,7 @@ export function PassScreen({
       )}
 
       {/* No ticket to save tonight, and the card is still theirs to keep. */}
-      {!ticket && <WalletLink href={cardLink} name={cardName} />}
+      {!ticket && <WalletLink apple={cardLink} google={googleCardLink} name={cardName} />}
 
       {failure && (
         <div className="w-full">

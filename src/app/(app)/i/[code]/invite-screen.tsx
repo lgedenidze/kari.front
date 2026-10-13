@@ -15,7 +15,18 @@ import { rememberTicket } from "@/lib/known-here";
 import type { InviteLinkResponse } from "@/lib/types";
 import { venue } from "@/venue";
 
-export function InviteScreen({ code, first, wallet = false }: { code: string; first: InviteLinkResponse | null; wallet?: boolean }) {
+export function InviteScreen({
+  code,
+  first,
+  wallet = false,
+  google = false,
+}: {
+  code: string;
+  first: InviteLinkResponse | null;
+  /** Whether this server can make an Apple Wallet pass, and offer one to Google Wallet. */
+  wallet?: boolean;
+  google?: boolean;
+}) {
   const { t, fill, night } = useI18n();
   // Kept current: this is how the guest's phone learns the door let them in.
   const live = useLive<InviteLinkResponse>(`/invites/code/${encodeURIComponent(code)}`, { every: 5000, first });
@@ -78,6 +89,7 @@ export function InviteScreen({ code, first, wallet = false }: { code: string; fi
           image={`/i/${encodeURIComponent(code)}/ticket.png`}
           fileName={`${venue.name.toLowerCase()}-${data.ticket.shortCode}`}
           wallet={wallet ? `/i/${encodeURIComponent(code)}/wallet.pkpass` : undefined}
+          google={google ? `/i/${encodeURIComponent(code)}/google-wallet` : undefined}
         />
         <p className="text-center text-sm text-ink-soft">{t.ticket.keepPage}</p>
         {failure && (

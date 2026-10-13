@@ -49,6 +49,7 @@ src/
     manifest.webmanifest/  the home-screen manifest; invite and ticket pages serve their own
     …/ticket.png/        the ticket as a picture, for the download button (pass, invite, door ticket)
     …/wallet.pkpass/     the ticket for an iPhone's Wallet, beside each picture
+    …/google-wallet/     the same for an Android phone: a redirect to Google with a signed link
     sitemap.ts robots.ts icon.svg apple-icon.png
   components/            ticket, live-ticket, stamp, qr, night-picker, app-chrome (dock), brand, icons, face,
                          decision-chip (what the door wrote down, in every list of its records),
@@ -62,10 +63,15 @@ src/
                          pkpass (builds and signs a Wallet pass file), wallet-ticket (what a ticket
                          says in Wallet), wallet-strip (the paper ticket across the pass, drawn for
                          each one), wallet-pass (the certificate, and the answer to the phone),
-                         ticket-fonts (the typeface of every picture the server draws)
+                         ticket-fonts (the typeface of every picture the server draws),
+                         google-pass (what a pass says in Google Wallet, and the signed link),
+                         google-api (stores a pass at Google), google-wallet (the key, and
+                         the answer to the phone)
 assets/fonts/            static fonts for the ticket picture (the app itself uses next/font)
 assets/wallet/           a Wallet pass's icon, logo and stamp (e2e/wallet-art.mjs draws them), and
                          Apple's public intermediate certificate
+public/wallet/           what Google Wallet fetches from the site: the logo; and Google's own
+                         "Add to Google Wallet" button, in Georgian and English — never redraw it
 e2e/                     flow.spec.ts (the journeys), loading.spec.ts (how a screen arrives, on a slowed
                          server), ticket-image.spec.ts; phone-audit.mjs, warm-tabs.mjs, ticket-image.mjs
 ```
@@ -133,6 +139,7 @@ stub of every pass, and under the sign-in forms. Keep it small; the bar's name i
 |---|---|
 | `API_URL` | Where the .NET API is. Server-side only. Read at request time. |
 | `NEXT_PUBLIC_SITE_URL` | This site's public address, for canonical links and the sitemap. On Vercel it falls back to the project's production URL. |
+| `GOOGLE_WALLET_KEY`, `GOOGLE_WALLET_ISSUER_ID` | The key file of the Google service account the bar's Google Wallet issuer account has let in (JSON, base64), and that issuer's number, for "Add to Google Wallet". **Secrets — never committed.** Without them the feature is simply absent. `scripts/google-wallet.sh` checks and installs them. |
 | `APPLE_PASS_P12`, `APPLE_PASS_P12_PASSWORD` | The bar's Pass Type ID certificate from Apple (a .p12, base64) and its password, for "Add to Apple Wallet". **Secrets — never committed.** Without them the feature is simply absent. `scripts/wallet-certificate.sh` installs them. |
 
 ## Deploy

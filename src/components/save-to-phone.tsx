@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useI18n } from "@/i18n/provider";
 import { AppleWalletBadge } from "./apple-wallet-badge";
+import { GoogleWalletBadge } from "./google-wallet-badge";
 
 // Ways to keep a ticket, under every live one.
 //
@@ -20,6 +21,10 @@ import { AppleWalletBadge } from "./apple-wallet-badge";
 // pass carries the ticket's short code, and the door treats it as it treats the picture: a
 // lookup, marked "by hand". A member's pass in Wallet is their card, good every night
 // (lib/wallet-ticket.ts): it is offered with or without a ticket for tonight — see WalletLink.
+//
+// "Add to Google Wallet" is the same offer on an Android phone, in the same place, where
+// the bar has its key from Google (lib/google-wallet.ts). A phone is offered its own wallet
+// and never the other one; a computer is offered neither.
 
 /** Chrome's install prompt. It fires once, early, so it is caught for the whole page. */
 type InstallPrompt = Event & { prompt: () => Promise<void> };
@@ -81,21 +86,40 @@ function rememberAdded(key: string) {
   walletListeners.forEach((listener) => listener());
 }
 
+/** Whose wallet this phone has: Apple's on an iPhone, Google's on an Android phone, nobody's elsewhere. */
+type Wallet = "apple" | "google";
+function walletOfThisPhone(): Wallet | null {
+  if (isIos()) return "apple";
+  return /Android/i.test(navigator.userAgent) ? "google" : null;
+}
+
 /**
- * Whether to offer Wallet here, and whether this phone has been offered it before.
+ * Whether to offer a wallet here — and which — and whether this phone has been offered it before.
  * `name` is what the phone remembers the pass by: a ticket's short code, or a member's card.
  */
-function useWalletOffer(href: string | undefined, name: string) {
+function useWalletOffer(links: { apple?: string; google?: string }, name: string) {
   // Known only in the browser, so it is read after the page has arrived, never guessed on the server.
-  const iphone = useSyncExternalStore(never, isIos, () => false);
+  const wallet = useSyncExternalStore(never, walletOfThisPhone, () => null);
   const key = `kari.wallet.${name}`;
   const added = useSyncExternalStore(subscribeToWallet, () => wasAdded(key), () => false);
-  return { href: iphone ? href : undefined, added, remember: () => rememberAdded(key) };
+  return { wallet, href: wallet ? links[wallet] : undefined, added, remember: () => rememberAdded(key) };
 }
 
 /** The badge — or, once it has been tapped on this phone, that it was, with the way to do it again. */
-function WalletOffer({ href, added, onAdd, last = false }: { href: string; added: boolean; onAdd: () => void; last?: boolean }) {
-  const { t } = useI18n();
+function WalletOffer({
+  wallet,
+  href,
+  added,
+  onAdd,
+  last = false,
+}: {
+  wallet: Wallet;
+  href: string;
+  added: boolean;
+  onAdd: () => void;
+  last?: boolean;
+}) {
+  const { t, lang } = useI18n();
   // A plain link: the phone itself answers a pass with its own "Add" sheet.
   return added ? (
     <p className={`flex min-h-11 flex-wrap items-center justify-center gap-x-3 text-sm font-semibold text-ink-soft ${last ? "" : "pb-1"}`}>
@@ -109,23 +133,28 @@ function WalletOffer({ href, added, onAdd, last = false }: { href: string; added
         {t.ticket.walletAgain}
       </a>
     </p>
-  ) : (
+  ) : wallet === "apple" ? (
     <a href={href} aria-label={t.ticket.wallet} className={`mx-auto block w-fit rounded-[0.55rem] active:opacity-80 ${last ? "" : "mb-4"}`} onClick={onAdd}>
       <AppleWalletBadge />
+    </a>
+  ) : (
+    // Google asks for 8 points clear on every side of its button: the link's own padding.
+    <a href={href} aria-label={t.ticket.googleWallet} className={`mx-auto block w-fit rounded-full p-2 active:opacity-80 ${last ? "" : "mb-2"}`} onClick={onAdd}>
+      <GoogleWalletBadge lang={lang} />
     </a>
   );
 }
 
 /**
- * "Add to Apple Wallet" by itself, where there is no ticket beside it to download: a member's
- * card is theirs on a night they hold no pass for, and on a night the bar is closed.
+ * The phone's own wallet by itself, where there is no ticket beside it to download: a
+ * member's card is theirs on a night they hold no pass for, and on a night the bar is closed.
  */
-export function WalletLink({ href, name }: { href: string | undefined; name: string }) {
-  const offer = useWalletOffer(href, name);
-  if (!offer.href) return null;
+export function WalletLink({ apple, google, name }: { apple?: string; google?: string; name: string }) {
+  const offer = useWalletOffer({ apple, google }, name);
+  if (!offer.wallet || !offer.href) return null;
   return (
     <div className="w-full max-w-[22rem] text-center">
-      <WalletOffer href={offer.href} added={offer.added} onAdd={offer.remember} last />
+      <WalletOffer wallet={offer.wallet} href={offer.href} added={offer.added} onAdd={offer.remember} last />
     </div>
   );
 }
@@ -147,6 +176,7 @@ export function SaveToPhone({
   image,
   fileName,
   wallet,
+  google,
   walletName,
 }: {
   /** Where this ticket's picture is served, e.g. "/pass/ticket.png". */
@@ -155,6 +185,8 @@ export function SaveToPhone({
   fileName: string;
   /** Where this ticket's Wallet pass is served, e.g. "/pass/wallet.pkpass". Absent where the server cannot make one. */
   wallet?: string;
+  /** Where this ticket is offered to Google Wallet, e.g. "/pass/google-wallet". Absent where the server cannot offer one. */
+  google?: string;
   /**
    * What this phone remembers the Wallet pass by, when that is not this ticket: a member's
    * card outlives every ticket. Otherwise the file name, which carries the ticket's short
@@ -163,8 +195,8 @@ export function SaveToPhone({
   walletName?: string;
 }) {
   const { t } = useI18n();
-  const offer = useWalletOffer(wallet, walletName ?? fileName);
-  const toWallet = offer.href;
+  const offer = useWalletOffer({ apple: wallet, google }, walletName ?? fileName);
+  const toWallet = offer.wallet && offer.href;
   const inWallet = offer.added;
   const canPrompt = useSyncExternalStore(subscribeToPrompt, () => installPrompt !== null, () => false);
   const standalone = useSyncExternalStore(subscribeToStandalone, isStandalone, () => false);
@@ -253,7 +285,7 @@ export function SaveToPhone({
   return (
     <>
       <div className="w-full max-w-[22rem] space-y-2.5 text-center">
-        {toWallet && <WalletOffer href={toWallet} added={inWallet} onAdd={offer.remember} />}
+        {offer.wallet && toWallet && <WalletOffer wallet={offer.wallet} href={toWallet} added={inWallet} onAdd={offer.remember} />}
         <button
           type="button"
           className={`btn w-full ${toWallet && !inWallet ? "btn-line text-paper-light" : "btn-paper"}`}

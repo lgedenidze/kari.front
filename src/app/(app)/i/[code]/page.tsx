@@ -1,6 +1,7 @@
 import { TopBar } from "@/components/app-chrome";
 import { firstAnswer } from "@/lib/server-api";
 import type { InviteLinkResponse } from "@/lib/types";
+import { googleWalletReady } from "@/lib/google-wallet";
 import { walletReady } from "@/lib/wallet-pass";
 import { InviteScreen } from "./invite-screen";
 
@@ -18,7 +19,7 @@ export default async function Page({ params }: { params: Promise<{ code: string 
     <>
       <TopBar />
       <main className="mx-auto flex w-full max-w-md flex-1 flex-col items-center px-5 pb-10 pt-6">
-        <InviteScreen code={code} first={first} wallet={walletReady()} />
+        <InviteScreen code={code} first={first} wallet={walletReady()} google={googleWalletReady()} />
       </main>
     </>
   );

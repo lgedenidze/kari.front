@@ -140,6 +140,7 @@ export const ka: Dict = {
     keepPage: "ეს ბმული შენი ბილეთია. შეინახე.",
     saveToPhone: "მთავარ ეკრანზე დამატება",
     wallet: "Apple Wallet-ში დამატება",
+    googleWallet: "Google Wallet-ში დამატება",
     walletDate: "თარიღი",
     walletDoors: "კარი",
     walletAdded: "დამატებულია Wallet-ში",

@@ -137,6 +137,7 @@ export const en = {
     keepPage: "This link is your ticket. Keep it.",
     saveToPhone: "Add to home screen",
     wallet: "Add to Apple Wallet",
+    googleWallet: "Add to Google Wallet",
     walletDate: "Date",
     walletDoors: "Doors",
     walletAdded: "Added to Wallet",

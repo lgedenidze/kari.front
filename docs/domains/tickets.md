@@ -122,8 +122,9 @@ as a door ticket is: someone opening the link sees the ticket in the first paint
 
 ## Keeping a ticket
 
-`components/save-to-phone.tsx`, under every live ticket. Two buttons, and on an iPhone a third,
-first: Add to Apple Wallet.
+`components/save-to-phone.tsx`, under every live ticket. Two buttons, and on a phone a third,
+first: its own wallet — Add to Apple Wallet on an iPhone, Add to Google Wallet on an Android
+phone. A phone is never offered the other one, and a computer is offered neither.
 
 ### Add to Apple Wallet
 
@@ -212,6 +213,57 @@ sheet. Each kind of ticket has its address, beside its picture: `/pass/wallet.pk
   design, delete the pass and add it again. A one-night pass a member added before the
   card existed still reads at the door that night, by its short code, and goes grey after.
   The card has not been seen in a real Wallet by anyone but the owner.
+
+### Add to Google Wallet
+
+The same offer on an Android phone, in the same place, asked for the night the member's card
+shipped ("how to add google card?"). Its addresses are the twins of Apple's:
+`/pass/google-wallet`, `/i/{code}/google-wallet`, `/t/{token}/google-wallet`. A member gets
+their card, good every night; a guest gets a ticket for one night; both say what the pass in
+an iPhone's Wallet says, and carry the same code, so the door needs to know nothing new.
+
+- **How Google does it.** There is no file. The address answers with a redirect to
+  `pay.google.com/gp/v/save/<token>`: a link, signed (RS256) with the key of a Google
+  service account that the bar's Google Wallet issuer account has let in. Google reads it
+  and offers "Add".
+- **The pass is stored at Google first** (`lib/google-api.ts`: a token, then the pass, and
+  the first time its class), and the link carries only its id. A link can carry the whole
+  pass instead, with nothing stored — and that was the first version. But Google asks that a
+  token stay under 1800 characters and Georgian is three bytes a letter: a member's card
+  with a short name came to 1715, a guest's ticket to 1846. Storing it also keeps the name
+  out of an address, and means a pass can later be changed where it lies. The whole pass in
+  the link is kept as the way through when storing fails: a long link is better than none.
+- **What the pass is** (`lib/google-pass.ts`). A "generic" pass: Google sets every word in
+  its own type on one flat colour, and gives a pass a logo, the bar's name, a small line and
+  a large one, and four places for a label and a value (`row2left`, `row2right`, `row3left`,
+  `row3right` — Google's own names, so the class needs no layout of its own). So: the app's
+  ink, the app's mark, the kind of pass over the name, then "valid: every night" and
+  "member since" (or the date and the doors), then "powered by wox.ge".
+- **No picture is drawn for it.** Google fetches a pass's pictures from a public address and
+  keeps them; a paper ticket with a name on it must not sit at one. The name is text, which
+  Google sets well. The logo is one file for everyone, `public/wallet/google-logo.png`
+  (drawn by `e2e/wallet-art.mjs`; Google cuts it to a circle), fetched from the site's
+  public address — `venue.url`, never the address a request happened to come to.
+- **The button** (`components/google-wallet-badge.tsx`) is Google's own file, in Georgian
+  and in English (`public/wallet/add-to-google-wallet.*.svg`). Google forbids a redrawn
+  one, and unlike Apple hands its files to anyone: at the size it comes in, with the
+  8 points of clear space Google asks for.
+- **The key** is a secret from the bar's Google account. It reaches the server as
+  `GOOGLE_WALLET_KEY` (the service account's key file, base64) and
+  `GOOGLE_WALLET_ISSUER_ID`; with either missing there is no button and the addresses
+  answer 404. `scripts/google-wallet.sh check|install <key.json> <issuer id>` asks Google
+  whether the key is good and whether the issuer has let it in, then installs both.
+- **Google's test mode.** A new issuer account can hand passes only to the accounts named in
+  its console — its admins, developers and test accounts — and they say "TEST ONLY". Everyone
+  else gets Google's error page. "Publishing access" is asked for in that console and
+  granted by Google after a review; nothing here can hurry it.
+- **What has been checked, and what has not.** The pass's words, the signed link and every
+  request to Google are tested against stand-ins (`google-pass.test.ts`,
+  `google-api.test.ts`), and the button and the redirect in a browser
+  (`e2e/ticket-image.spec.ts`). **Google itself has never been asked with a real key:** the
+  bar had no issuer account when this was written. The first real tap is the first test;
+  if Google refuses the pass, its reason is in the server's log.
+- **"Added to Wallet"** is remembered by the phone exactly as for Apple's.
 
 ### Download ticket
 

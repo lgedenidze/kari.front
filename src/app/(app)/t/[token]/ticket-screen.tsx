@@ -11,7 +11,18 @@ import { rememberTicket } from "@/lib/known-here";
 import type { TicketResponse } from "@/lib/types";
 import { venue } from "@/venue";
 
-export function TicketScreen({ token, first, wallet = false }: { token: string; first: TicketResponse | null; wallet?: boolean }) {
+export function TicketScreen({
+  token,
+  first,
+  wallet = false,
+  google = false,
+}: {
+  token: string;
+  first: TicketResponse | null;
+  /** Whether this server can make an Apple Wallet pass, and offer one to Google Wallet. */
+  wallet?: boolean;
+  google?: boolean;
+}) {
   const { t } = useI18n();
   const { data, failure, missing } = useLive<TicketResponse>(`/tickets/${encodeURIComponent(token)}`, { every: 6000, first });
 
@@ -48,6 +59,7 @@ export function TicketScreen({ token, first, wallet = false }: { token: string; 
         image={`/t/${encodeURIComponent(token)}/ticket.png`}
         fileName={`${venue.name.toLowerCase()}-${data.ticket.shortCode}`}
         wallet={wallet ? `/t/${encodeURIComponent(token)}/wallet.pkpass` : undefined}
+        google={google ? `/t/${encodeURIComponent(token)}/google-wallet` : undefined}
       />
       <p className="text-center text-sm text-ink-soft">{t.ticket.keepPage}</p>
     </div>

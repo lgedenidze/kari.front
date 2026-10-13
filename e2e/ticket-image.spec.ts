@@ -30,6 +30,10 @@ async function memberWithPass(browser: Browser): Promise<{ page: Page; shortCode
   return { page, shortCode: ticket.shortCode };
 }
 
+// On the pass page the ticket is `article.ticket`. Its placeholder is a `.ticket` too, and for
+// a moment while the page arrives both are in it: a test that asks for `.ticket` then finds
+// two, now and again.
+
 /** A member approved by the bar, who has claimed nothing. */
 async function member(browser: Browser): Promise<{ page: Page; lastName: string }> {
   const lastName = `Picture${run}${Math.floor(Math.random() * 1e4)}`;
@@ -143,7 +147,7 @@ test("a member's pass in Wallet is their card: offered on an iPhone with or with
   const iphone = await browser.newContext({ ...playwright.devices["iPhone 14"], storageState: await holder.context().storageState() });
   const onIphone = await iphone.newPage();
   await onIphone.goto("/pass");
-  await expect(onIphone.locator(".ticket")).toContainText(lastName);
+  await expect(onIphone.locator("article.ticket")).toContainText(lastName);
   const badge = onIphone.getByRole("link", { name: "Add to Apple Wallet" });
   await expect(badge).toHaveCount(made ? 1 : 0);
 
@@ -157,7 +161,7 @@ test("a member's pass in Wallet is their card: offered on an iPhone with or with
 
   // An Android phone is never offered it.
   await holder.goto("/pass");
-  await expect(holder.locator(".ticket")).toContainText(lastName);
+  await expect(holder.locator("article.ticket")).toContainText(lastName);
   await expect(holder.getByRole("link", { name: "Add to Apple Wallet" })).toHaveCount(0);
 
   // Nobody else's pass, with or without a certificate.
@@ -211,4 +215,75 @@ test("a guest's pass in Wallet is still a ticket for one night", async ({ browse
   // Its code is the ticket's short code and nothing else, and it leaves with its night.
   expect(body).toContain(`"message":"${pass.shortCode}"`);
   expect(body).toContain("expirationDate");
+});
+
+/** What a link to Google Wallet carries: the claims Google will read. */
+function offered(response: APIResponse): { payload: { genericObjects: Record<string, unknown>[] } } {
+  const link = response.headers()["location"];
+  expect(link.startsWith("https://pay.google.com/gp/v/save/")).toBe(true);
+  // One person's pass must never sit in a shared cache.
+  expect(response.headers()["cache-control"]).toContain("private");
+  return JSON.parse(Buffer.from(link.split("/save/")[1].split(".")[1], "base64url").toString("utf8"));
+}
+
+// "Add to Google Wallet". It needs the bar's key from Google, which is a secret and is on no
+// machine by default — so, as for Apple's, this test holds whichever is true here: with no
+// key there is no button and no link; with one, an Android phone is offered Google's button
+// and the link behind it goes to Google with the member's card.
+test("an Android phone is offered Google Wallet exactly when a pass can be offered, and an iPhone is not", async ({ browser, playwright }) => {
+  // The tests' own phone is an Android one.
+  const { page: holder, lastName } = await member(browser);
+
+  const answer = await holder.request.get("/pass/google-wallet", { maxRedirects: 0 });
+  expect([302, 404]).toContain(answer.status());
+  const ready = answer.status() === 302;
+
+  // A member with no pass for tonight: the card is offered all the same.
+  await holder.goto("/pass");
+  await expect(holder.locator("article.ticket")).toContainText(lastName);
+  const badge = holder.getByRole("link", { name: "Add to Google Wallet" });
+  await expect(badge).toHaveCount(ready ? 1 : 0);
+
+  // An iPhone is offered its own wallet, never this one.
+  const iphone = await browser.newContext({ ...playwright.devices["iPhone 14"], storageState: await holder.context().storageState() });
+  const onIphone = await iphone.newPage();
+  await onIphone.goto("/pass");
+  await expect(onIphone.locator("article.ticket")).toContainText(lastName);
+  await expect(onIphone.getByRole("link", { name: "Add to Google Wallet" })).toHaveCount(0);
+
+  // Nobody else's pass, with or without a key.
+  const stranger = await (await browser.newContext()).newPage();
+  expect((await stranger.request.get("/pass/google-wallet", { maxRedirects: 0 })).status()).toBe(404);
+  expect((await stranger.request.get("/t/not-a-real-token/google-wallet", { maxRedirects: 0 })).status()).toBe(404);
+  expect((await stranger.request.get("/i/not-a-real-code/google-wallet", { maxRedirects: 0 })).status()).toBe(404);
+
+  if (!ready) return;
+  await expect(badge).toHaveAttribute("href", "/pass/google-wallet");
+  // Google's own button, in the page's language, at the size Google hands it out in.
+  await expect(badge.locator("img")).toHaveAttribute("src", "/wallet/add-to-google-wallet.en.svg");
+  expect((await holder.request.get("/wallet/add-to-google-wallet.en.svg")).status()).toBe(200);
+  expect((await holder.request.get("/wallet/google-logo.png")).headers()["content-type"]).toBe("image/png");
+
+  // The link names the member's card. Where it could not be stored at Google first — a key
+  // Google does not know, as on a machine with a stand-in — it carries the card whole.
+  const [card] = offered(answer).payload.genericObjects;
+  expect(card.id).toMatch(/^\d+\.card-[0-9A-Z]{7}$/);
+  if (card.barcode) {
+    expect(card.barcode).toMatchObject({ type: "QR_CODE", value: `KM.${String(card.id).split("card-")[1]}` });
+    expect(JSON.stringify(card.header)).toContain(lastName);
+    expect(card.validTimeInterval).toBeUndefined();
+  }
+
+  // A guest's ticket goes the same way, and stays a ticket for one night.
+  const staff = await signedIn(browser, seed.StaffPhone, seed.StaffPassword);
+  const issued = await staff.request.post("/api/door/walk-in", { data: { firstName: "Tamar", lastName: `Android${run}`, personalNumber: "" } });
+  const { ticketToken, pass } = (await issued.json()) as { ticketToken: string; pass: { shortCode: string } };
+  const guest = await stranger.request.get(`/t/${ticketToken}/google-wallet`, { maxRedirects: 0 });
+  expect(guest.status()).toBe(302);
+  const [ticket] = offered(guest).payload.genericObjects;
+  expect(ticket.id).toMatch(/^\d+\.ticket-[0-9A-Z]{16}$/);
+  if (ticket.barcode) {
+    expect(ticket.barcode).toMatchObject({ type: "QR_CODE", value: pass.shortCode });
+    expect(ticket.validTimeInterval).toBeTruthy();
+  }
 });
