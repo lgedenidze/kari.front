@@ -142,6 +142,7 @@ How often each screen asks:
 | invites | 8 s | answers to sent invites |
 | door counters | 6 s | inside / turned away |
 | admin overview, requests | 10–15 s | new requests |
+| an admin's account, from the dock | 30 s | the count of requests waiting, on every screen |
 
 ## SEO
 

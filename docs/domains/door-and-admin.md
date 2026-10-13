@@ -98,6 +98,18 @@ then remembered: going back to a tab already shown never waits.
 | Door log | `log.tsx` | Every decision on one night: records on a phone, a table on a desk. |
 | Settings | `settings.tsx` | Opening days, door hours, the cutoff, capacity, invite defaults. |
 
+### How many requests are waiting
+
+An admin sees the number in two places: on Office in the dock, from every screen, and on the
+Requests tab. Both read one value, `me.pendingRequests` (`useRequestsWaiting` in
+`components/me.tsx`). The API sends it with the account and sends 0 to everyone who is not an
+admin, so it is on screen with the page and is never a second thing to wait for.
+
+It is kept current three ways. The dock re-reads the account every 30 seconds and whenever the
+app comes back into view (`signed-chrome.tsx`). Approving or rejecting takes one off at once.
+And when the review queue itself reports a different total, the account is read again
+(`requests.tsx`). `e2e/flow.spec.ts` holds the two places to the same number.
+
 ### Nights
 
 Two jobs, kept apart on purpose:

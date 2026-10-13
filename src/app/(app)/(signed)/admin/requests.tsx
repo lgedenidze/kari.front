@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FormError } from "@/components/field";
 import { RowsSkeleton } from "@/components/loading";
+import { useMe } from "@/components/me";
 import { refreshLive, useLive } from "@/components/use-live";
 import { useI18n } from "@/i18n/provider";
 import { api, isApiError } from "@/lib/api";
@@ -19,6 +20,16 @@ export function RequestsTab() {
   const [reviewFailure, setReviewFailure] = useState<string | null>(null);
   const failure = reviewFailure ?? live.failure;
 
+  // The count on this tab and on the dock comes with the account, which is asked for less
+  // often than this list. When the list says a different number the account is read again,
+  // so the two never disagree for longer than that takes.
+  const { me, setMe, refresh } = useMe();
+  const listed = live.data?.total;
+  const counted = me.pendingRequests;
+  useEffect(() => {
+    if (listed !== undefined && counted !== undefined && listed !== counted) void refresh();
+  }, [listed, counted, refresh]);
+
   async function review(id: string, decision: "approve" | "reject", note: string) {
     setReviewFailure(null);
     try {
@@ -26,6 +37,8 @@ export function RequestsTab() {
       // Out of the queue at once, without waiting for the next poll to say so.
       const queue = peek<UserPage>(QUEUE);
       if (queue) live.set({ ...queue, items: queue.items.filter((person) => person.id !== id), total: Math.max(0, queue.total - 1) });
+      // And out of the count, on this tab and on the dock, in the same moment.
+      setMe((was) => ({ ...was, pendingRequests: Math.max(0, (was.pendingRequests ?? 1) - 1) }));
       // The first tab counts the requests still waiting.
       refreshLive("/admin/overview");
     } catch (error) {

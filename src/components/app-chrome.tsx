@@ -9,6 +9,7 @@ import { useEffect, type ReactNode } from "react";
 import { useI18n } from "@/i18n/provider";
 import { LANG_COOKIE, type Lang } from "@/venue";
 import { VenueMark } from "./brand";
+import { Count } from "./count";
 import { InviteIcon, OfficeIcon, PassIcon, ProfileIcon, ScanIcon } from "./icons";
 import type { UserRole } from "@/lib/types";
 
@@ -66,17 +67,22 @@ export function TopBar({ right }: { right?: ReactNode }) {
  * The place you are in is a paper ticket stub, notched like every ticket in the app, and it
  * slides to the tab you tap.
  *
+ * A tab with something waiting behind it carries the count in red: invites to answer, and for
+ * an admin the requests to join that nobody has reviewed yet.
+ *
  * `shown` is where the marker sits: the tab just tapped, or else the page that is open. The
  * frame above decides that (signed-chrome.tsx), because the screen itself answers a tap too.
  */
 export function Dock({
   role,
   invitesWaiting = 0,
+  requestsWaiting = 0,
   shown,
   onTap,
 }: {
   role: UserRole;
   invitesWaiting?: number;
+  requestsWaiting?: number;
   shown: string;
   onTap: (href: string) => void;
 }) {
@@ -86,7 +92,7 @@ export function Dock({
     { href: "/pass", label: t.pass.title, icon: PassIcon, badge: 0 },
     { href: "/invites", label: t.invites.title, icon: InviteIcon, badge: invitesWaiting },
     ...(role !== "member" ? [{ href: "/door", label: t.door.title, icon: ScanIcon, badge: 0 }] : []),
-    ...(role === "admin" ? [{ href: "/admin", label: t.admin.short, icon: OfficeIcon, badge: 0 }] : []),
+    ...(role === "admin" ? [{ href: "/admin", label: t.admin.short, icon: OfficeIcon, badge: requestsWaiting }] : []),
     { href: "/profile", label: t.profile.title, icon: ProfileIcon, badge: 0 },
   ];
   const current = tabs.findIndex((tab) => shown.startsWith(tab.href));
@@ -145,11 +151,10 @@ export function Dock({
                 >
                   <span className="relative">
                     <tab.icon />
-                    {tab.badge > 0 && (
-                      <span className="absolute -right-2.5 -top-1.5 grid h-[1.15rem] min-w-[1.15rem] place-items-center rounded-full bg-stop px-1 text-[0.68rem] font-extrabold text-ink-deep ring-2 ring-ink-deep">
-                        {tab.badge}
-                      </span>
-                    )}
+                    {/* Hung from the icon's corner by its left edge, so a second digit grows
+                        outwards and never across the icon. On the stub it sits on paper,
+                        everywhere else on ink. */}
+                    <Count n={tab.badge} ground={active ? "paper" : "ink"} className="absolute -top-2 left-[1.05rem]" />
                   </span>
                   {/* The condensed cut, like the headlines: five labels fit a 360px phone.
                       The line is tall on purpose: Georgian letters hang well below it (ვ, ფ, პ),

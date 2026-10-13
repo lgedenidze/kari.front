@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import { Dock } from "@/components/app-chrome";
-import { MeProvider, useMe } from "@/components/me";
+import { MeProvider, useMe, usePoll } from "@/components/me";
 import type { Me } from "@/lib/types";
 
 export function SignedChrome({ me, children }: { me: Me; children: ReactNode }) {
@@ -37,6 +37,19 @@ export function SignedChrome({ me, children }: { me: Me; children: ReactNode }) 
 }
 
 function SharedDock({ shown, onTap }: { shown: string; onTap: (href: string) => void }) {
-  const { me } = useMe();
-  return <Dock role={me.role} invitesWaiting={me.pendingInvites} shown={shown} onTap={onTap} />;
+  const { me, refresh } = useMe();
+  // An admin's dock counts the requests waiting for an answer. It is the one number here that
+  // changes because of somebody else, on a screen that may stay open all night — so it is
+  // asked for again every half minute, and whenever the app comes back into view.
+  usePoll(refresh, 30_000, me.role === "admin");
+  return (
+    <Dock
+      role={me.role}
+      invitesWaiting={me.pendingInvites}
+      // Missing only while an older API is still answering, in the minutes of a release.
+      requestsWaiting={me.pendingRequests ?? 0}
+      shown={shown}
+      onTap={onTap}
+    />
+  );
 }

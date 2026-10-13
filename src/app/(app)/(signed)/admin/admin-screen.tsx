@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 import { LangToggle } from "@/components/app-chrome";
 import { VenueMark, WoxCredit } from "@/components/brand";
+import { Count } from "@/components/count";
+import { useRequestsWaiting } from "@/components/me";
 import { useI18n } from "@/i18n/provider";
 import type { Overview } from "@/lib/types";
 import { LogTab } from "./log";
@@ -21,10 +23,12 @@ export type AdminTab = (typeof TABS)[number];
  * sitting down, for minutes at a time — the opposite of the door.
  *
  * This is its frame — the bar at the top and the row of tabs. Nothing in it waits for the
- * server, so it is drawn from the tap, the same whether the page has arrived or not.
+ * server, so it is drawn from the tap, the same whether the page has arrived or not. The count
+ * on the requests tab is the one the dock shows: it came with the account, not with this page.
  */
 function AdminFrame({ tab, onTab, children }: { tab: AdminTab; onTab?: (tab: AdminTab) => void; children: ReactNode }) {
   const { t } = useI18n();
+  const waiting = useRequestsWaiting();
 
   const labels: Record<AdminTab, string> = {
     tonight: t.admin.navTonight,
@@ -62,11 +66,12 @@ function AdminFrame({ tab, onTab, children }: { tab: AdminTab; onTab?: (tab: Adm
                     onTab?.(key);
                     event.currentTarget.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
                   }}
-                  className={`min-h-11 border-b-[3px] px-3 pb-2 text-[0.95rem] font-bold ${
+                  className={`inline-flex min-h-11 items-center gap-1.5 border-b-[3px] px-3 pb-2 text-[0.95rem] font-bold ${
                     tab === key ? "border-ink text-ink" : "border-transparent text-desk-soft hover:text-ink"
                   }`}
                 >
                   {labels[key]}
+                  {key === "requests" && <Count n={waiting} ground="desk" />}
                 </button>
               </li>
             ))}

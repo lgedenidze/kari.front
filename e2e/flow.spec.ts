@@ -292,3 +292,69 @@ test("an admin names a night, and members see it by name", async ({ browser }) =
   const stillNamed = (await (await admin.request.get("/api/admin/nights")).json()) as { night: string; title: string | null }[];
   expect(stillNamed.find((n) => n.night === date)?.title ?? null).toBeNull();
 });
+
+/** Someone asks to join, straight through the API: one more request in the bar's queue. */
+async function askToJoin(browser: Browser, first: string, last: string): Promise<void> {
+  const context = await english(browser);
+  const asked = await context.request.post("/api/auth/register", {
+    data: {
+      firstName: first,
+      lastName: last,
+      phone: newPhone(),
+      password: PASSWORD,
+      facebookUrl: `facebook.com/${first}.${last}`.toLowerCase(),
+      lang: "en",
+      adult: true,
+      consent: true,
+    },
+  });
+  expect(asked.ok()).toBe(true);
+  await context.close();
+}
+
+test("an admin sees how many requests are waiting, on the dock and on the requests tab", async ({ browser }) => {
+  const last = `Count${run}`;
+  await askToJoin(browser, "Queue", last);
+
+  const admin = await signIn(browser, seed.AdminPhone, seed.AdminPassword);
+  const waiting = async () =>
+    ((await (await admin.request.get("/api/admin/users?status=pending")).json()) as { total: number }).total;
+  const start = await waiting();
+  expect(start).toBeGreaterThan(0);
+
+  // On the dock, from any screen — and it comes with the page, not after it.
+  const office = admin.getByRole("navigation", { name: "Home" }).getByRole("link", { name: /Office/ });
+  const onDock = office.locator("[data-count]");
+  await expect(onDock).toHaveAttribute("data-count", String(start));
+  expect(await (await admin.request.get("/pass")).text()).toContain(`data-count="${start}"`);
+  // The number it arrived with is not news: nothing moves.
+  await expect(onDock).not.toHaveClass(/count-thump/);
+
+  // The same number on the requests tab of the back office.
+  await office.click();
+  await admin.waitForURL("**/admin");
+  const onTab = admin.getByRole("navigation", { name: "Back office" }).getByRole("button", { name: /Requests/ }).locator("[data-count]");
+  await expect(onTab).toHaveAttribute("data-count", String(start));
+  await expect(onDock).toHaveAttribute("data-count", String(start));
+
+  // Someone else asks while the admin has the app open. Coming back to the app asks again,
+  // and the new number lands with a thump, in both places.
+  await askToJoin(browser, "Later", last);
+  await admin.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
+  await expect(onDock).toHaveAttribute("data-count", String(start + 1));
+  await expect(onDock).toHaveClass(/count-thump/);
+  await expect(onTab).toHaveAttribute("data-count", String(start + 1));
+
+  // An answer takes it out of the count at once, with no reload.
+  await admin.getByRole("navigation", { name: "Back office" }).getByRole("button", { name: /Requests/ }).click();
+  const request = admin.locator("li", { has: admin.getByRole("heading", { name: `Queue ${last}` }) });
+  await request.getByRole("button", { name: "Reject" }).click();
+  await expect(request).toBeHidden();
+  await expect(onTab).toHaveAttribute("data-count", String(start));
+  await expect(onDock).toHaveAttribute("data-count", String(start));
+  expect(await waiting()).toBe(start);
+
+  // The door is not told how long the queue is.
+  const staff = await signIn(browser, seed.StaffPhone, seed.StaffPassword);
+  expect(((await (await staff.request.get("/api/me")).json()) as { pendingRequests: number }).pendingRequests).toBe(0);
+});

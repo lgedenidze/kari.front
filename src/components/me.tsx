@@ -1,12 +1,23 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type Dispatch,
+  type ReactNode,
+  type SetStateAction,
+} from "react";
 import { api } from "@/lib/api";
 import type { Me } from "@/lib/types";
 
 interface MeState {
   me: Me;
-  setMe: (me: Me) => void;
+  /** Takes the new account, or a function of the one there is now — for a count going down by one. */
+  setMe: Dispatch<SetStateAction<Me>>;
   /** Re-reads the account from the API — after an approval, a new invite, a visit. */
   refresh: () => Promise<void>;
 }
@@ -17,7 +28,10 @@ export function MeProvider({ initial, children }: { initial: Me; children: React
   const [me, setMe] = useState(initial);
   const refresh = useCallback(async () => {
     try {
-      setMe(await api.get<Me>("/me"));
+      const heard = await api.get<Me>("/me");
+      // The same answer as last time changes nothing, so nothing on screen is drawn again:
+      // an admin's dock asks every half minute, all night.
+      setMe((was) => (JSON.stringify(was) === JSON.stringify(heard) ? was : heard));
     } catch {
       // Keep what we have; the next poll or navigation will try again.
     }
@@ -29,6 +43,15 @@ export function useMe(): MeState {
   const value = useContext(MeContext);
   if (!value) throw new Error("useMe must be used inside MeProvider");
   return value;
+}
+
+/**
+ * How many requests to join are waiting for an answer. The API tells only an admin; for
+ * everyone else this is 0. It is also 0 where there is no account at all — a placeholder drawn
+ * for a signed-out visitor who is on their way to the sign-in page — so it never throws.
+ */
+export function useRequestsWaiting(): number {
+  return useContext(MeContext)?.me.pendingRequests ?? 0;
 }
 
 /**

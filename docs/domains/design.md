@@ -30,6 +30,7 @@ All in `src/app/globals.css` under `@theme`.
 | `qr` | `#fffafa` | the QR window and inputs — the whitest surface |
 | `stamp-blue` / `-red` / `-green` | `#2447d8` / `#b3122e` / `#0b6b41` | stamp inks, for marks **on paper** |
 | `go` / `stop` / `wait` | `#46d893` / `#ff6b7f` / `#ffc44d` | door signals, for marks **on ink** |
+| `alert` | `#e5173f` | a count that wants an answer, **on ink**; white figures (4.6:1) |
 | `desk` / `desk-line` / `desk-soft` | `#f7f4f5` / `#e3dcdf` / `#5f6480` | the back office only |
 
 The palette is deliberately not Wox's purple. Only the dot in the Wox mark is purple.
@@ -54,6 +55,7 @@ Georgian has no capital letters. Do not build hierarchy on uppercase.
 | `LiveTicket` | `components/live-ticket.tsx` | A ticket with the rotating QR. See [tickets.md](tickets.md). |
 | `Stamp` | `components/stamp.tsx` | A round stamp with a word across it. Inks: blue, green, red, grey, paper. |
 | `Dock` | `components/app-chrome.tsx` | The floating navigation on every signed-in screen. |
+| `Count` | `components/count.tsx` | A red mark with a white number: something is waiting for an answer. See "The dock". |
 | `NightPicker` | `components/night-picker.tsx` | The two-week calendar. |
 | icons | `components/icons.tsx` | The app's own icons: ticket, invite, viewfinder, rubber stamp, person-in-ring. |
 | `Field`, `FormError` | `components/field.tsx` | A labelled input wired to its hint and error. A password field can be looked at before it is sent: there is no second field to catch a slip, and no "forgot password". |
@@ -73,6 +75,14 @@ The current place is a paper ticket stub (`.tab-stub`) with the same side notche
 ticket. It slides to the tab that is tapped — at once, before the page has arrived. The dock is
 built once, in `(signed)/layout.tsx`, and never unmounts; that is what lets it slide. A result or a form at the door covers the dock, so
 nobody leaves a decision by accident.
+
+A tab with something waiting behind it carries a count (`Count`, `.count`): invites to answer on
+Invites, and for an admin the requests to join on Office. The same count sits on the Requests
+tab of the back office. It is red with white figures on every ground — `alert` on ink,
+`stamp-red` on the stub and on the desk — with a rim in the ground's colour. Nothing is drawn
+at zero, and "99+" stands for anything larger than 99. The number a screen arrives with does
+not move. A change after that lands with one thump and one ring (`.count-thump`), and then
+the mark keeps still: it never pulses.
 
 ## Rules
 

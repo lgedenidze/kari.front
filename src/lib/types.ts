@@ -36,6 +36,8 @@ export interface Me {
   visits: number;
   regularAfterVisits: number;
   pendingInvites: number;
+  /** Requests to join that nobody has answered. Always 0 unless this is an admin. */
+  pendingRequests: number;
 }
 
 export interface NightInfo {

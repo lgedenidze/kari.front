@@ -34,6 +34,7 @@
   --color-go: #46d893;
   --color-stop: #ff6b7f;
   --color-wait: #ffc44d;
+  --color-alert: #e5173f; /* a count that wants an answer, on ink: white figures, 4.6:1 */
 
   /* the back office: a desk in daylight */
   --color-desk: #f7f4f5;
@@ -486,6 +487,57 @@
     white-space: nowrap;
   }
 
+  /* A count that wants an answer: requests to review, invites to reply to. A round red mark
+     with a white number in it. The red is the one that carries on the ground it sits on —
+     a bright one on ink, the stamp pad's on paper and on the desk — and it has a rim in that
+     ground's colour, so it reads as cut out of whatever is under it. */
+  .count {
+    --count-red: var(--color-alert);
+    --count-rim: var(--color-ink-deep);
+    position: relative;
+    display: inline-grid;
+    place-items: center;
+    box-sizing: border-box;
+    flex: none;
+    min-width: 1.4rem;
+    height: 1.4rem;
+    padding: 0 0.3rem;
+    border: 2px solid var(--count-rim);
+    border-radius: 999px;
+    background: var(--count-red);
+    color: #fff;
+    font-size: 0.7rem;
+    font-weight: 800;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    font-variation-settings: "wdth" 100;
+    transition:
+      background-color 200ms,
+      border-color 200ms;
+  }
+  .count-on-paper {
+    --count-red: var(--color-stamp-red);
+    --count-rim: var(--color-paper);
+  }
+  .count-on-desk {
+    --count-red: var(--color-stamp-red);
+    --count-rim: var(--color-stamp-red);
+  }
+
+  /* The number changed: it lands like a stamp, and one ring goes out from it. Once. */
+  .count-thump {
+    animation: count-thump 420ms var(--ease-thump) backwards;
+  }
+  .count-thump::after {
+    content: "";
+    position: absolute;
+    inset: -2px;
+    border: 2px solid var(--count-red);
+    border-radius: inherit;
+    pointer-events: none;
+    animation: count-ring 720ms ease-out both;
+  }
+
   .tabular {
     font-variant-numeric: tabular-nums;
   }
@@ -545,6 +597,23 @@
   }
 }
 
+@keyframes count-thump {
+  from {
+    transform: scale(0.3);
+  }
+}
+
+@keyframes count-ring {
+  from {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(2.2);
+  }
+}
+
 @keyframes sweep {
   to {
     transform: translateX(100%);
@@ -566,10 +635,15 @@
   .rise,
   .page-in,
   .page-in.leaving,
+  .count-thump,
   .skeleton::after {
     animation: none;
   }
+  .count-thump::after {
+    display: none;
+  }
   .btn,
+  .count,
   .tab-stub {
     transition: none;
   }
