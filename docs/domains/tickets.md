@@ -158,10 +158,14 @@ sheet. Each kind of ticket has its address, beside its picture: `/pass/wallet.pk
   app's own vocabulary: Apple asks that it look the same everywhere. It is a drawing of
   Apple's badge. Apple's own file comes only with its Wallet marketing agreement; when the
   account has accepted it, put Apple's file in that component.
-- **Not checked on a phone.** An iPhone refuses any pass not signed by a certificate from
-  Apple, so until one is installed nobody has seen this pass in Wallet. The file's
-  structure and signature are verified (unit tests, and `openssl smime -verify`); how
-  Wallet lays the fields out has to be looked at on a real iPhone the day it is switched on.
+- **Installed on 2026-10-13.** Pass Type ID `pass.ge.wox.kari`, in the owner's Apple
+  Developer team (Vellin Inc., `C9A26VQ37D`). **The certificate expires on 2027-11-12:**
+  make a new one before then (`scripts/wallet-certificate.sh`, both steps), or the badge
+  starts handing out passes an iPhone refuses.
+- **What has been checked, and what has not.** A pass fetched from the live site verifies
+  with `openssl smime -verify` all the way to Apple's root certificate, and its manifest
+  matches its files. How Wallet lays the fields out has only been reasoned from Apple's
+  documentation: it needs looking at on a real iPhone.
 
 ### Download ticket
 
