@@ -84,13 +84,26 @@ export function SaveToPhone({
     return picture.current.blob;
   }
 
-  // Start drawing the moment a finger lands, before the tap is complete. A phone only opens
-  // its share sheet while it still counts the tap as the reason — every moment saved matters.
+  // Have the picture in hand before it is asked for. A phone only opens its share sheet while
+  // it still counts the tap as the reason, and drawing the picture takes a second or so: done
+  // ahead, the sheet opens on the tap itself. It waits a moment first, so it never competes
+  // with the ticket's own requests, and it is skipped for someone saving data.
   function warm() {
     void pictureFor().catch(() => {
       picture.current = null;
     });
   }
+  useEffect(() => {
+    const saving = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData === true;
+    if (saving) return;
+    const timer = setTimeout(() => {
+      if (picture.current?.image !== image) picture.current = { image, blob: fetchPicture(image) };
+      picture.current.blob.catch(() => {
+        picture.current = null;
+      });
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [image]);
 
   async function download() {
     setMaking(true);
