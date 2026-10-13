@@ -132,7 +132,7 @@ test("coming back to a tab shows what it last showed, not the state from before"
       lastName: `Back${run}`,
       phone: `5${String(Math.floor(Math.random() * 1e8)).padStart(8, "0")}`,
       password: "e2e-guest-password",
-      facebookUrl: `lasha.back.${run}`,
+      profileUrl: `lasha.back.${run}`,
       lang: "en",
       adult: true,
       consent: true,

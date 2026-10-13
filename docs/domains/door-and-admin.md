@@ -55,7 +55,8 @@ A full-screen sheet over everything, including the dock.
 2. Warnings: same name as a suspended person; at capacity; marked closed tonight.
 3. The person: photo, name large, status, the pass's short code, nights so far; the personal
    number in a box marked "check this against their ID"; who invited them; last visit; times
-   turned away before; staff notes; a button to open their Facebook profile.
+   turned away before; staff notes; a button to open their profile, named for the network it is
+   on ("Open Instagram"; for a network the app has no name for, the host itself).
 4. Two large buttons: **Deny** and **Admit**. Deny asks for a reason from six, in one more tap.
 
 The verdict is advice. Staff may admit against a red band; the log records what they saw. The
@@ -96,7 +97,7 @@ then remembered: going back to a tab already shown never waits.
 | Tab | File | What |
 |---|---|---|
 | Tonight | `overview.tsx` | Requests waiting; inside, passes, turned away, members; the last 14 nights as a table. A night in the table opens the door's list for that night. |
-| Requests | `requests.tsx` | The review queue, oldest first. Open the Facebook profile, then approve with one tap or reject with two: the first opens the note to the guest and a way back. |
+| Requests | `requests.tsx` | The review queue, oldest first. Open the guest's profile — the button names the network (`lib/profile-link.ts`) — then approve with one tap or reject with two: the first opens the note to the guest and a way back. |
 | People | `people.tsx` | Rows to tap on a phone, a table on a desk. Search, and filters in one row that scrolls. A person's page: status, role, inviting, quota, notes for the door, password reset, door history. |
 | Nights | `nights.tsx` | "Add a night" for any date; named and changed nights by name; the next three weeks, each night a row to tap. |
 | Door log | `log.tsx` | Every decision on one night: records on a phone, a table on a desk. Arrows step a night back and on; the date field takes any other night. In Georgian the tab is "კარის სია" (the door's list). |

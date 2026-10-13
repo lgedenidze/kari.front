@@ -25,7 +25,7 @@ export interface Me {
   firstName: string;
   lastName: string;
   phone: string;
-  facebookUrl: string | null;
+  profileUrl: string | null;
   role: UserRole;
   status: UserStatus;
   reviewNote: string | null;
@@ -143,7 +143,7 @@ export interface PersonCard {
   lastName: string;
   personalNumber: string | null;
   phone: string | null;
-  facebookUrl: string | null;
+  profileUrl: string | null;
   status: UserStatus;
   hasPhoto: boolean;
   visits: number;
@@ -220,7 +220,7 @@ export interface AdminUser {
   firstName: string;
   lastName: string;
   phone: string;
-  facebookUrl: string | null;
+  profileUrl: string | null;
   role: UserRole;
   status: UserStatus;
   hasPhoto: boolean;

@@ -71,7 +71,7 @@ const me = await (
   await guest.request.post(`${base}/api/auth/register`, {
     data: {
       firstName: "ნინო", lastName: "აბაშიძე", phone: phone(), password: PASSWORD,
-      facebookUrl: `nino.audit.${run}`, lang: "ka", adult: true, consent: true,
+      profileUrl: `nino.audit.${run}`, lang: "ka", adult: true, consent: true,
     },
   })
 ).json();

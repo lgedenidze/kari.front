@@ -9,6 +9,7 @@ import { PhotoPicker } from "@/components/photo-picker";
 import { useI18n } from "@/i18n/provider";
 import { api, isApiError } from "@/lib/api";
 import { forgetMember } from "@/lib/known-here";
+import { shortLink } from "@/lib/profile-link";
 import { forgetAll } from "@/lib/live-store";
 import type { Me } from "@/lib/types";
 
@@ -55,10 +56,10 @@ export function ProfileScreen() {
             <dd className="tabular font-bold">{me.visits}</dd>
           </div>
         </dl>
-        {me.facebookUrl && (
+        {me.profileUrl && (
           <p className="truncate text-sm">
-            <a href={me.facebookUrl} target="_blank" rel="noopener" className="link">
-              {me.facebookUrl.replace("https://www.", "")}
+            <a href={me.profileUrl} target="_blank" rel="noopener" className="link">
+              {shortLink(me.profileUrl)}
             </a>
           </p>
         )}

@@ -32,7 +32,7 @@ async function memberWithPass(browser: Browser): Promise<{ page: Page; shortCode
       lastName: `Picture${run}`,
       phone: `5${String(Math.floor(Math.random() * 1e8)).padStart(8, "0")}`,
       password: "e2e-guest-password",
-      facebookUrl: `mariam.picture.${run}.${Math.floor(Math.random() * 1e6)}`,
+      profileUrl: `mariam.picture.${run}.${Math.floor(Math.random() * 1e6)}`,
       lang: "en",
       adult: true,
       consent: true,

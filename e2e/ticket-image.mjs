@@ -36,7 +36,7 @@ for (const [firstName, lastName, lang] of names) {
       lastName,
       phone: `5${String(Math.floor(Math.random() * 1e8)).padStart(8, "0")}`,
       password: "ticket-image-password",
-      facebookUrl: `ticket.image.${run}.${lang}`,
+      profileUrl: `ticket.image.${run}.${lang}`,
       lang,
       adult: true,
       consent: true,

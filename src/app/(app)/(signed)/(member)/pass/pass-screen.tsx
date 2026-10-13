@@ -13,6 +13,7 @@ import { PassIcon } from "@/components/icons";
 import { useLive } from "@/components/use-live";
 import { useI18n } from "@/i18n/provider";
 import { api, isApiError } from "@/lib/api";
+import { shortLink } from "@/lib/profile-link";
 import type { Me, NightInfo, TonightResponse } from "@/lib/types";
 import { venue } from "@/venue";
 
@@ -86,7 +87,7 @@ export function PassScreen({ first, week = null }: { first: TonightResponse | nu
           note={me.reviewNote}
           prompt={t.pass.reapply}
           submit={t.pass.reapplySubmit}
-          current={me.facebookUrl}
+          current={me.profileUrl}
           onDone={setMe}
         />
       ) : me.status === "guest" ? (
@@ -210,10 +211,9 @@ function PendingCard({ me, onChanged }: { me: Me; onChanged: (me: Me) => void })
     return (
       <ApplyCard
         title={t.pass.changeLink}
-        body={t.join.facebookHint}
-        prompt={t.join.facebook}
+        prompt={t.join.profile}
         submit={t.common.save}
-        current={me.facebookUrl}
+        current={me.profileUrl}
         onDone={(updated) => {
           onChanged(updated);
           setEditing(false);
@@ -268,12 +268,12 @@ function PendingCard({ me, onChanged }: { me: Me; onChanged: (me: Me) => void })
 
       <p className="mt-5 text-sm text-paper-soft">{t.pass.pendingBody}</p>
 
-      {me.facebookUrl && (
+      {me.profileUrl && (
         <div className="mt-5 rounded-xl border-2 border-ink bg-qr px-4 py-3">
           <p className="text-sm font-bold">{t.pass.yourLink}</p>
           {/* A link, so the guest can see for themselves that it opens the right profile. */}
-          <a href={me.facebookUrl} target="_blank" rel="noopener" className="link block truncate">
-            {me.facebookUrl.replace("https://www.", "")}
+          <a href={me.profileUrl} target="_blank" rel="noopener" className="link block truncate">
+            {shortLink(me.profileUrl)}
           </a>
           <button type="button" className="link mt-1.5 text-sm" onClick={() => setEditing(true)}>
             {t.pass.changeLink}
@@ -284,7 +284,7 @@ function PendingCard({ me, onChanged }: { me: Me; onChanged: (me: Me) => void })
   );
 }
 
-/** Asks for membership with a Facebook link: the first time for a guest, again after a rejection. */
+/** Asks for membership with a profile on a social network: the first time for a guest, again after a rejection. */
 function ApplyCard({
   title,
   body,
@@ -296,7 +296,8 @@ function ApplyCard({
   onCancel,
 }: {
   title: string;
-  body: string;
+  /** A line under the title. Left out where the field's own hint already says it. */
+  body?: string;
   note?: string | null;
   prompt: string | null;
   submit: string;
@@ -311,14 +312,14 @@ function ApplyCard({
 
   async function apply(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const facebookUrl = new FormData(event.currentTarget).get("facebookUrl");
+    const profileUrl = new FormData(event.currentTarget).get("profileUrl");
     setBusy(true);
     setFieldError(undefined);
     setFailure(null);
     try {
-      onDone(await api.post<Me>("/me/apply", { facebookUrl }));
+      onDone(await api.post<Me>("/me/apply", { profileUrl }));
     } catch (error) {
-      if (isApiError(error) && error.fields.facebookUrl) setFieldError(error.fields.facebookUrl);
+      if (isApiError(error) && error.fields.profileUrl) setFieldError(error.fields.profileUrl);
       else setFailure(isApiError(error) ? error.code : "server_error");
       setBusy(false);
     }
@@ -329,7 +330,7 @@ function ApplyCard({
     <form onSubmit={apply} noValidate className={`paper w-full space-y-4 p-6 ${onCancel ? "rise" : ""}`}>
       <div>
         <h1 className="text-[clamp(1.9rem,8.6vw,2.5rem)]">{title}</h1>
-        <p className="mt-3 text-paper-soft">{body}</p>
+        {body && <p className="mt-3 text-paper-soft">{body}</p>}
       </div>
       {note && (
         <p className="rounded-xl border-2 border-ink bg-qr px-4 py-3">
@@ -339,17 +340,16 @@ function ApplyCard({
       )}
       <FormError code={failure} />
       <Field
-        label={prompt ?? t.join.facebook}
-        name="facebookUrl"
-        type="url"
-        inputMode="url"
+        label={prompt ?? t.join.profile}
+        name="profileUrl"
         autoCapitalize="none"
         autoCorrect="off"
+        autoComplete="off"
         spellCheck={false}
-        defaultValue={current ?? ""}
-        placeholder="facebook.com/your.name"
+        defaultValue={current ? shortLink(current) : ""}
+        placeholder="@your.name"
         required
-        hint={t.join.facebookHint}
+        hint={t.join.profileHint}
         error={fieldError}
       />
       <button type="submit" className="btn btn-ink w-full" disabled={busy}>

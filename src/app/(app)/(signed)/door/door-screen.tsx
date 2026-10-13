@@ -12,6 +12,7 @@ import { Stamp } from "@/components/stamp";
 import { useLive } from "@/components/use-live";
 import { useI18n } from "@/i18n/provider";
 import { api, isApiError } from "@/lib/api";
+import { networkOf } from "@/lib/profile-link";
 import { savedTicketCode } from "@/lib/saved-ticket";
 import type { DecideResponse, Decision, DoorTonight, Entry, ScanResult, SearchHit, Verdict, WalkInResponse } from "@/lib/types";
 import { Scanner, ScannerStarting } from "./scanner";
@@ -404,9 +405,9 @@ function ResultSheet({
               </p>
             )}
 
-            {person.facebookUrl && (
-              <a href={person.facebookUrl} target="_blank" rel="noopener" className="btn btn-line btn-small mt-4">
-                {t.door.openFacebook}
+            {person.profileUrl && (
+              <a href={person.profileUrl} target="_blank" rel="noopener" className="btn btn-line btn-small mt-4">
+                {fill(t.common.openProfile, { platform: networkOf(person.profileUrl) })}
               </a>
             )}
           </article>

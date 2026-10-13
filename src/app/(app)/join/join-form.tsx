@@ -33,7 +33,7 @@ export function JoinForm() {
         lastName: form.get("lastName"),
         phone: form.get("phone"),
         password: form.get("password"),
-        facebookUrl: form.get("facebookUrl"),
+        profileUrl: form.get("profileUrl"),
         photo,
         lang,
         adult,
@@ -87,18 +87,18 @@ export function JoinForm() {
         )}
       </div>
 
+      {/* A name or a link, so it is a plain text field: a "link" field would refuse "@nino". */}
       <Field
-        label={t.join.facebook}
-        name="facebookUrl"
-        type="url"
-        inputMode="url"
+        label={t.join.profile}
+        name="profileUrl"
         autoCapitalize="none"
         autoCorrect="off"
+        autoComplete="off"
         spellCheck={false}
-        placeholder="facebook.com/your.name"
+        placeholder="@your.name"
         required
-        hint={t.join.facebookHint}
-        error={fields.facebookUrl}
+        hint={t.join.profileHint}
+        error={fields.profileUrl}
       />
 
       <Field

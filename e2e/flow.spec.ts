@@ -50,7 +50,8 @@ test("a guest joins, the bar approves, the door scans and admits, and it is in t
   await guest.getByLabel("First name").fill(first);
   await guest.getByLabel("Last name").fill(last);
   await guest.getByLabel("Phone number").fill(newPhone());
-  await guest.getByLabel("Facebook profile link").fill(`facebook.com/nino.flow.${run}`);
+  // A name on its own is an Instagram name: no link to go and copy.
+  await guest.getByLabel("Instagram or Facebook").fill(`@nino.flow.${run}`);
   await guest.getByLabel("Password", { exact: true }).fill(PASSWORD);
   await guest.getByText("I am 18 or older.").click();
   await guest.getByText("I agree that the bar stores").click();
@@ -64,9 +65,10 @@ test("a guest joins, the bar approves, the door scans and admits, and it is in t
   await admin.goto("/admin#requests");
   const request = admin.locator("li", { has: admin.getByRole("heading", { name: `${first} ${last}` }) });
   await expect(request).toBeVisible();
-  await expect(request.getByRole("link", { name: "Open Facebook profile" })).toHaveAttribute(
+  // The button says which network it opens.
+  await expect(request.getByRole("link", { name: "Open Instagram" })).toHaveAttribute(
     "href",
-    `https://www.facebook.com/nino.flow.${run}`,
+    `https://www.instagram.com/nino.flow.${run}`,
   );
   await request.getByRole("button", { name: "Approve" }).click();
   await expect(request).toBeHidden();
@@ -123,7 +125,7 @@ test("a member invites a named guest, who gets a ticket with no account", async 
   const register = await host.request.post("/api/auth/register", {
     data: {
       firstName: "Keti", lastName: last, phone: newPhone(), password: PASSWORD,
-      facebookUrl: `keti.host.${run}`, lang: "en", adult: true, consent: true,
+      profileUrl: `keti.host.${run}`, lang: "en", adult: true, consent: true,
     },
   });
   expect(register.ok()).toBe(true);
@@ -308,7 +310,7 @@ test("an admin names a night, and members see it by name", async ({ browser }) =
     await member.request.post("/api/auth/register", {
       data: {
         firstName: "Lika", lastName: `Named${run}`, phone: newPhone(), password: PASSWORD,
-        facebookUrl: `lika.named.${run}`, lang: "en", adult: true, consent: true,
+        profileUrl: `lika.named.${run}`, lang: "en", adult: true, consent: true,
       },
     })
   ).json();
@@ -352,7 +354,7 @@ async function askToJoin(browser: Browser, first: string, last: string): Promise
       lastName: last,
       phone: newPhone(),
       password: PASSWORD,
-      facebookUrl: `facebook.com/${first}.${last}`.toLowerCase(),
+      profileUrl: `facebook.com/${first}.${last}`.toLowerCase(),
       lang: "en",
       adult: true,
       consent: true,
@@ -398,6 +400,8 @@ test("an admin sees how many requests are waiting, on the dock and on the reques
   // An answer takes it out of the count at once, with no reload.
   await admin.getByRole("navigation", { name: "Back office" }).getByRole("button", { name: /Requests/ }).click();
   const request = admin.locator("li", { has: admin.getByRole("heading", { name: `Queue ${last}` }) });
+  // This one asked with a Facebook link, and its button says so.
+  await expect(request.getByRole("link", { name: "Open Facebook" })).toHaveAttribute("href", `https://www.facebook.com/queue.${last.toLowerCase()}`);
   // A no is asked for twice: the first tap opens the note to the guest and a way back.
   await request.getByRole("button", { name: "Reject" }).click();
   await expect(request.getByPlaceholder("Note for the guest")).toBeVisible();

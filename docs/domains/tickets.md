@@ -62,10 +62,10 @@ account:
 - `approved` and closed tonight → the same ticket, saying closed, and when the next open night
   is. The coming week comes with the page (`getVenue`, the landing page's own copy);
 - `pending` → "your request is with the bar", with a grey stamp, the three steps (sent, in
-  review, pass), and the Facebook link that was sent — a link, so they can see it opens the
+  review, pass), and the profile that was sent — a link, so they can see it opens the
   right profile — with a way to change it. A mistyped link is the usual reason a request sits
   unanswered. The page polls and changes by itself when the bar answers;
-- `rejected` → the bar's note, and a form to fix the Facebook link and ask again;
+- `rejected` → the bar's note, and a form to fix the profile link and ask again;
 - `guest` → a form to ask for membership;
 - `banned` → suspended.
 

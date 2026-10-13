@@ -7,6 +7,7 @@ import { RowsSkeleton } from "@/components/loading";
 import { useI18n } from "@/i18n/provider";
 import { api, isApiError } from "@/lib/api";
 import { peek, put } from "@/lib/live-store";
+import { networkOf } from "@/lib/profile-link";
 import type { AdminUser, AdminUserDetail, InviteMode, Settings, UserPage, UserRole, UserStatus } from "@/lib/types";
 
 const STATUSES: UserStatus[] = ["approved", "pending", "guest", "rejected", "banned"];
@@ -283,9 +284,9 @@ function PersonDetail({ id, onBack }: { id: string; onBack: () => void }) {
             {`. ${fill(t.door.nights, { n: user.visits })}`}
             {detail.invitesSent > 0 && `. ${fill(t.admin.invitesSent, { n: detail.invitesSent })}`}
           </p>
-          {user.facebookUrl && (
-            <a href={user.facebookUrl} target="_blank" rel="noopener" className="link mt-2 inline-block">
-              {t.admin.openFacebook}
+          {user.profileUrl && (
+            <a href={user.profileUrl} target="_blank" rel="noopener" className="link mt-2 inline-block">
+              {fill(t.common.openProfile, { platform: networkOf(user.profileUrl) })}
             </a>
           )}
         </div>

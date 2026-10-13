@@ -9,11 +9,12 @@ import { refreshLive, useLive } from "@/components/use-live";
 import { useI18n } from "@/i18n/provider";
 import { api, isApiError } from "@/lib/api";
 import { peek } from "@/lib/live-store";
+import { networkOf } from "@/lib/profile-link";
 import type { AdminUser, UserPage } from "@/lib/types";
 
 const QUEUE = "/admin/users?status=pending";
 
-/** The review queue, oldest first: open the Facebook profile, then say yes or no. */
+/** The review queue, oldest first: open the guest's profile, then say yes or no. */
 export function RequestsTab() {
   const { t } = useI18n();
   const live = useLive<UserPage>(QUEUE, { every: 15000 });
@@ -101,9 +102,9 @@ function RequestCard({
         </div>
       </div>
 
-      {person.facebookUrl && (
-        <a href={person.facebookUrl} target="_blank" rel="noopener" className="btn btn-line">
-          {t.admin.openFacebook}
+      {person.profileUrl && (
+        <a href={person.profileUrl} target="_blank" rel="noopener" className="btn btn-line">
+          {fill(t.common.openProfile, { platform: networkOf(person.profileUrl) })}
         </a>
       )}
 

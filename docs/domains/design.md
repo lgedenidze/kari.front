@@ -134,7 +134,7 @@ The screens were cut to the words that are needed (2026-10-13, on the owner's in
 - **A screen explains itself by what is on it.** No paragraph under a title saying what the
   title said. A form has a title and its fields.
 - **A field gets a hint only when the hint changes what is typed:** which name (the one on the
-  ID), how to find the Facebook link, how long a password must be. Never "you will sign in
+  ID), what to put for a profile, how long a password must be. Never "you will sign in
   with this number".
 - **An empty list gets no heading and no sentence.** "For you" appears on Invites when there is
   an invite; "No nights yet" is not said at all. The exception is an empty state that is the

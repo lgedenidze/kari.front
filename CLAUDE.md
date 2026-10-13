@@ -55,6 +55,7 @@ src/
   i18n/                  en.ts, ka.ts, formatters, provider
   lib/                   api (browser), server-api (server), live-store (what each screen last heard),
                          known-here (what this phone remembers, for the public pages),
+                         profile-link (the name of the network a guest's profile is on),
                          pass-code, scan-presence, web-manifest, types, photo
 assets/fonts/            static fonts for the ticket picture (the app itself uses next/font)
 e2e/                     flow.spec.ts (the journeys), loading.spec.ts (how a screen arrives, on a slowed
