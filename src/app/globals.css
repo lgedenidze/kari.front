@@ -115,6 +115,28 @@
     -webkit-tap-highlight-color: transparent;
   }
 
+  /* A tap is a tap. The phone does not wait to see whether a second one is coming (which is
+     also what zooms the page under a thumb that taps twice), so a button answers at once. */
+  a,
+  button,
+  [role="button"],
+  input,
+  select,
+  textarea,
+  label {
+    touch-action: manipulation;
+  }
+
+  /* A thumb that rests on a button a moment too long must not select its word, and resting
+     on the dock must not raise the browser's link preview: this is an app, not a page of links. */
+  button,
+  [role="button"],
+  .tab-dock a {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+
   button:not(:disabled),
   [role="button"] {
     cursor: pointer;
@@ -282,6 +304,14 @@
     border-radius: 12px;
     padding: 0.75rem 0.9rem;
     font-weight: 600;
+  }
+
+  /* Brought into view after a failed tap, these stop clear of the top of the screen and of
+     the dock that floats over the bottom of it. */
+  .notice-error,
+  .input,
+  .check input {
+    scroll-margin: 5rem 0 7.5rem;
   }
 
   .check {

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { FormError } from "@/components/field";
+import { PassIcon } from "@/components/icons";
 import { LiveTicket } from "@/components/live-ticket";
 import { TicketSkeleton } from "@/components/loading";
 import { SaveToPhone } from "@/components/save-to-phone";
@@ -82,7 +83,9 @@ export function InviteScreen({ code, first }: { code: string; first: InviteLinkR
     );
   }
 
-  // Pending: the invite already looks like the ticket it will become.
+  // Pending: the invite already is the ticket it will become — the guest's name, the night,
+  // who vouches for them — with one thing missing: the code, and the button that prints it.
+  // The same shape as a member's pass before it is claimed, so the two are learnt once.
   return (
     <div className="flex w-full flex-col items-center gap-5">
       <h1 className="self-start text-4xl text-paper">{fill(t.inviteLink.title, { inviter: invite.inviterName })}</h1>
@@ -92,14 +95,17 @@ export function InviteScreen({ code, first }: { code: string; first: InviteLinkR
         firstName={invite.guestFirstName}
         lastName={invite.guestLastName}
         kindLabel={fill(t.ticket.guestOf, { name: invite.inviterName })}
+        caption={<p className="font-normal text-paper-soft">{t.inviteLink.idNote}</p>}
         stubLeft={
           invite.guestPersonalNumber ? <StubCode label={t.common.personalNumber} code={invite.guestPersonalNumber} /> : <span />
         }
         poweredBy={t.common.poweredBy}
       >
-        <div className="flex aspect-[4/3] w-full flex-col justify-center gap-2 text-center">
-          <p className="text-lg font-bold leading-snug">{fill(t.inviteLink.forName, { name: guestName })}</p>
-          <p className="text-sm text-paper-soft">{t.inviteLink.idNote}</p>
+        <div className="flex aspect-square w-full flex-col items-center justify-center gap-5 rounded-xl border-[3px] border-dashed border-paper-line px-2 text-center">
+          <PassIcon width={52} height={52} className="text-paper-soft" />
+          <button type="button" className="btn btn-ink btn-big w-full" disabled={busy} onClick={() => answer("accept")}>
+            {busy ? t.inviteLink.accepting : t.inviteLink.accept}
+          </button>
         </div>
       </TicketCard>
 
@@ -109,14 +115,9 @@ export function InviteScreen({ code, first }: { code: string; first: InviteLinkR
         </div>
       )}
 
-      <div className="w-full max-w-[22rem] space-y-3">
-        <button type="button" className="btn btn-paper btn-big w-full" disabled={busy} onClick={() => answer("accept")}>
-          {busy ? t.inviteLink.accepting : t.inviteLink.accept}
-        </button>
-        <button type="button" className="btn btn-line w-full text-paper-light" disabled={busy} onClick={() => answer("decline")}>
-          {t.invites.decline}
-        </button>
-      </div>
+      <button type="button" className="link px-3 py-2.5 text-ink-soft" disabled={busy} onClick={() => answer("decline")}>
+        {t.invites.cantCome}
+      </button>
     </div>
   );
 }

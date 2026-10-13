@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { VenueMark, WoxCredit } from "@/components/brand";
+import { Face } from "@/components/face";
 import { Field, FormError } from "@/components/field";
 import { FindIcon, LogIcon, ScanIcon } from "@/components/icons";
 import { useMe } from "@/components/me";
@@ -353,8 +354,7 @@ function ResultSheet({
           <article className="paper p-5">
             <div className="flex items-start gap-4">
               {person.hasPhoto && person.userId && (
-                // eslint-disable-next-line @next/next/no-img-element -- an authenticated API image
-                <img src={`/api/photos/${person.userId}`} alt="" className="h-24 w-24 flex-none rounded-2xl border-2 border-ink object-cover" />
+                <Face userId={person.userId} className="h-24 w-24 flex-none rounded-2xl border-2 border-ink object-cover" />
               )}
               <div className="min-w-0">
                 <p className="display break-words text-[2.3rem]">
@@ -502,37 +502,42 @@ function Finder({ onOpen, onWalkIn }: { onOpen: (hit: SearchHit) => void; onWalk
         <p className="text-center text-ink-soft">{t.door.noResults}</p>
       ) : (
         <ul className="space-y-2">
-          {hits.map((hit) => (
-            <li key={hit.passId ?? hit.userId}>
-              <button
-                type="button"
-                onClick={() => onOpen(hit)}
-                className="flex w-full items-center justify-between gap-3 rounded-2xl bg-ink px-4 py-3 text-left hover:bg-ink-raised"
-              >
-                <span className="min-w-0">
-                  <span className="block truncate text-lg font-bold text-paper-light">{hit.name}</span>
-                  <span className="block truncate text-sm text-ink-soft">
-                    {hit.detail?.startsWith("guest_of:")
-                      ? fill(t.door.guestOf, { name: hit.detail.slice("guest_of:".length) })
-                      : hit.detail === "member"
-                        ? t.ticket.member
-                        : hit.detail === "door"
-                          ? t.ticket.doorTicket
-                          : hit.detail === "guest"
-                            ? t.status.guest
-                            : hit.detail}
-                  </span>
-                </span>
-                <span
-                  className={`chip flex-none ${
-                    hit.admitted ? "text-go" : hit.status === "banned" || hit.status === "revoked" ? "text-stop" : "text-paper-light"
-                  }`}
+          {hits.map((hit) => {
+            const detail = hit.detail?.startsWith("guest_of:")
+              ? fill(t.door.guestOf, { name: hit.detail.slice("guest_of:".length) })
+              : hit.detail === "member"
+                ? t.ticket.member
+                : hit.detail === "door"
+                  ? t.ticket.doorTicket
+                  : hit.detail === "guest"
+                    ? t.status.guest
+                    : hit.detail;
+            const standing = hit.admitted ? t.door.inside : t.status[hit.status];
+            return (
+              <li key={hit.passId ?? hit.userId}>
+                <button
+                  type="button"
+                  onClick={() => onOpen(hit)}
+                  className="flex w-full items-center justify-between gap-3 rounded-2xl bg-ink px-4 py-3 text-left transition-colors hover:bg-ink-raised active:bg-ink-raised"
                 >
-                  {hit.admitted ? t.door.inside : t.status[hit.status]}
-                </span>
-              </button>
-            </li>
-          ))}
+                  <span className="min-w-0">
+                    <span className="block truncate text-lg font-bold text-paper-light">{hit.name}</span>
+                    <span className="block truncate text-sm text-ink-soft">{detail}</span>
+                  </span>
+                  {/* Where they stand — unless the line under the name has just said the same word. */}
+                  {standing !== detail && (
+                    <span
+                      className={`chip flex-none ${
+                        hit.admitted ? "text-go" : hit.status === "banned" || hit.status === "revoked" ? "text-stop" : "text-paper-light"
+                      }`}
+                    >
+                      {standing}
+                    </span>
+                  )}
+                </button>
+              </li>
+            );
+          })}
         </ul>
       )}
 
@@ -617,13 +622,12 @@ function WalkInSheet({ onClose, onIssued }: { onClose: () => void; onIssued: (re
           </div>
         ) : (
           <form onSubmit={submit} noValidate className="paper rise space-y-4 p-6">
-            <div>
-              <h2 className="text-4xl">{t.door.walkIn}</h2>
-              <p className="mt-2 text-paper-soft">{t.door.walkInIntro}</p>
-            </div>
+            <h2 className="text-4xl">{t.door.walkIn}</h2>
             <FormError code={failure} />
-            <Field label={t.common.firstName} name="firstName" autoComplete="off" required autoFocus error={fields.firstName} />
-            <Field label={t.common.lastName} name="lastName" autoComplete="off" required error={fields.lastName} />
+            <div className="grid grid-cols-2 gap-3">
+              <Field label={t.common.firstName} name="firstName" autoComplete="off" required autoFocus error={fields.firstName} />
+              <Field label={t.common.lastName} name="lastName" autoComplete="off" required error={fields.lastName} />
+            </div>
             <Field
               label={t.common.personalNumber}
               name="personalNumber"

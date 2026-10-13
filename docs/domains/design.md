@@ -58,7 +58,8 @@ Georgian has no capital letters. Do not build hierarchy on uppercase.
 | `Count` | `components/count.tsx` | A red mark with a white number: something is waiting for an answer. See "The dock". |
 | `NightPicker` | `components/night-picker.tsx` | The two-week calendar. |
 | icons | `components/icons.tsx` | The app's own icons: ticket, invite, viewfinder, rubber stamp, person-in-ring. |
-| `Field`, `FormError` | `components/field.tsx` | A labelled input wired to its hint and error. A password field can be looked at before it is sent: there is no second field to catch a slip, and no "forgot password". |
+| `Field`, `FormError` | `components/field.tsx` | A labelled input wired to its hint and error. A password field can be looked at before it is sent: there is no second field to catch a slip, and no "forgot password". `FieldLabel` puts "optional" at the far end of the label's line. `useFirstMistake` takes a form that came back with mistakes to the first one; `FormError` brings itself into view. |
+| `Face` | `components/face.tsx` | A person's photo from the API. A photo that will not load leaves nothing behind — never the browser's broken-picture mark. |
 | `TicketSkeleton`, `RowsSkeleton` | `components/loading.tsx` | The one material for "not here yet": a quiet block with a light sweeping across. See structure.md, "Arriving on a screen". |
 
 CSS classes worth knowing: `.btn` with `.btn-paper` (main action on ink), `.btn-ink` (main
@@ -107,6 +108,33 @@ the mark keeps still: it never pulses.
     animation says where it starts and ends as the element itself is.
 11. **An error state offers the way out as a button.** "No camera — find the guest by name"
     comes with the Find button, not only the sentence.
+12. **A failed tap is answered where the eye is.** A form is sent from its last line, and the
+    field that needs fixing is often a screen above it. `useFirstMistake` goes to that field;
+    a failure of the whole request brings its notice into view.
+13. **A no is asked for twice; a yes is not.** Rejecting a request, cancelling an invite and
+    deleting a night each take a second tap, in place. Approving, admitting and creating do not.
+14. **A row that opens something is the button.** A person, a night in the schedule, a line of
+    the profile: the whole row is tapped and carries an arrow. Not a row with an "Edit" button
+    in it.
+
+## Words
+
+The screens were cut to the words that are needed (2026-10-13, on the owner's instruction:
+"remove unnecessary texts"). Keep them that way.
+
+- **A screen explains itself by what is on it.** No paragraph under a title saying what the
+  title said. A form has a title and its fields.
+- **A field gets a hint only when the hint changes what is typed:** which name (the one on the
+  ID), how to find the Facebook link, how long a password must be. Never "you will sign in
+  with this number".
+- **An empty list gets no heading and no sentence.** "For you" appears on Invites when there is
+  an invite; "No nights yet" is not said at all. The exception is an empty state that is the
+  whole screen (no requests waiting), which gets one short line.
+- **A name is two fields on one line,** on a phone too.
+- **"Optional" is one small word at the end of the label's line,** not a bracket after it.
+- **Never say the same word twice in one row** — a search result that reads "Member" under the
+  name does not also carry a "Member" chip.
+- Everything a button does is still said on the button, and every error keeps its full sentence.
 
 ## The Wox credit
 

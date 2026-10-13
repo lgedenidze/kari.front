@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { Face } from "@/components/face";
 import { FormError } from "@/components/field";
 import { RowsSkeleton } from "@/components/loading";
 import { useI18n } from "@/i18n/provider";
@@ -267,10 +268,7 @@ function PersonDetail({ id, onBack }: { id: string; onBack: () => void }) {
       </button>
 
       <div className="flex items-start gap-5">
-        {user.hasPhoto && (
-          // eslint-disable-next-line @next/next/no-img-element -- an authenticated API image
-          <img src={`/api/photos/${user.id}`} alt="" className="h-24 w-24 flex-none rounded-2xl border-2 border-ink object-cover" />
-        )}
+        {user.hasPhoto && <Face userId={user.id} className="h-24 w-24 flex-none rounded-2xl border-2 border-ink object-cover" />}
         <div className="min-w-0">
           <h1 className="title">
             {user.firstName} {user.lastName}

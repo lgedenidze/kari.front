@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type FormEvent } from "react";
-import { Field, FormError } from "@/components/field";
+import { useRef, useState, type FormEvent } from "react";
+import { Field, FormError, useFirstMistake } from "@/components/field";
 import { RowsSkeleton } from "@/components/loading";
 import { useMe } from "@/components/me";
 import { NightPicker } from "@/components/night-picker";
@@ -50,18 +50,18 @@ export function InvitesScreen({ first }: { first: InvitesOverview | null }) {
   }
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-8">
       <h1 className="title text-paper">{t.invites.title}</h1>
 
       {failure && <FormError code={failure} />}
 
-      <section aria-labelledby="for-you">
-        <h2 id="for-you" className="text-2xl text-paper">
-          {t.invites.forYou}
-        </h2>
-        {data.received.length === 0 ? (
-          <p className="mt-3 text-ink-soft">{t.invites.noneReceived}</p>
-        ) : (
+      {/* Invites that want an answer come first — and only when there are some. With none,
+          the screen is simply the form: an empty list gets no heading and no sentence. */}
+      {data.received.length > 0 && (
+        <section aria-labelledby="for-you">
+          <h2 id="for-you" className="text-2xl text-paper">
+            {t.invites.forYou}
+          </h2>
           <ul className="mt-4 space-y-3">
             {data.received.map((invite) => (
               <ReceivedInvite
@@ -72,16 +72,15 @@ export function InvitesScreen({ first }: { first: InvitesOverview | null }) {
               />
             ))}
           </ul>
-        )}
-      </section>
+        </section>
+      )}
 
-      <section aria-labelledby="from-you">
-        <h2 id="from-you" className="text-2xl text-paper">
-          {t.invites.fromYou}
-        </h2>
+      <section aria-label={t.invites.fromYou} className="space-y-4">
+        {/* The two halves are only named when both are on screen. */}
+        {data.received.length > 0 && <h2 className="text-2xl text-paper">{t.invites.fromYou}</h2>}
 
         {!data.canInvite ? (
-          <div className="mt-4 rounded-2xl border-2 border-ink-line p-5">
+          <div className="rounded-2xl border-2 border-ink-line p-5">
             <h3 className="text-lg text-paper-light">{t.invites.lockedTitle}</h3>
             <p className="mt-2 text-ink-soft">
               {me.status === "approved"
@@ -102,13 +101,12 @@ export function InvitesScreen({ first }: { first: InvitesOverview | null }) {
         )}
 
         {data.sent.length > 0 && (
-          <ul className="mt-6 space-y-3">
+          <ul className="space-y-3 pt-2">
             {data.sent.map((invite) => (
               <SentInvite key={invite.id} invite={invite} onRevoke={() => act(() => api.post(`/invites/${invite.id}/revoke`))} />
             ))}
           </ul>
         )}
-        {data.canInvite && data.sent.length === 0 && !created && <p className="mt-5 text-ink-soft">{t.invites.noneSent}</p>}
       </section>
     </div>
   );
@@ -125,8 +123,8 @@ function stateLabel(t: ReturnType<typeof useI18n>["t"], invite: Invite): string 
   }[invite.status];
 }
 
-function nightLine(invite: Invite, night: (n: string, s?: "short" | "long") => string): string {
-  return invite.nightTitle ? `${night(invite.night, "long")}, ${invite.nightTitle}` : night(invite.night, "long");
+function nightLine(invite: Invite, night: (n: string, s?: "short" | "long") => string, style: "short" | "long" = "long"): string {
+  return invite.nightTitle ? `${night(invite.night, style)}, ${invite.nightTitle}` : night(invite.night, style);
 }
 
 function ReceivedInvite({ invite, onAccept, onDecline }: { invite: Invite; onAccept: () => void; onDecline: () => void }) {
@@ -179,18 +177,20 @@ function SentInvite({ invite, onRevoke }: { invite: Invite; onRevoke: () => void
 
   return (
     <li className="rounded-2xl border-2 border-ink-line p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="truncate text-lg font-bold text-paper-light">
-            {invite.guestFirstName} {invite.guestLastName}
-          </p>
-          <p className="text-sm text-ink-soft">{nightLine(invite, night)}</p>
-          {invite.guestPersonalNumber && <p className="tabular text-sm text-ink-soft">{invite.guestPersonalNumber}</p>}
-        </div>
+      {/* Who, and where it stands, share the first line; the night has the next one to itself,
+          so a long Georgian date is never squeezed beside the chip. */}
+      <div className="flex items-center justify-between gap-3">
+        <p className="min-w-0 truncate text-lg font-bold text-paper-light">
+          {invite.guestFirstName} {invite.guestLastName}
+        </p>
         <span className={`chip flex-none ${invite.admitted ? "text-go" : open ? "text-paper" : "text-ink-soft"}`}>
           {stateLabel(t, invite)}
         </span>
       </div>
+      <p className="mt-0.5 text-sm text-ink-soft">
+        {nightLine(invite, night, "short")}
+        {invite.guestPersonalNumber && <span className="tabular">, {invite.guestPersonalNumber}</span>}
+      </p>
 
       {open &&
         (confirming ? (
@@ -206,7 +206,7 @@ function SentInvite({ invite, onRevoke }: { invite: Invite; onRevoke: () => void
             </div>
           </div>
         ) : (
-          <div className="mt-3 flex flex-wrap gap-2 text-paper-light">
+          <div className="mt-3 grid grid-cols-2 gap-2 text-paper-light">
             <ShareLink code={invite.code} small />
             <button type="button" className="btn btn-line btn-small" onClick={() => setConfirming(true)}>
               {t.invites.revoke}
@@ -246,7 +246,7 @@ function ShareLink({ code, small = false }: { code: string; small?: boolean }) {
   }
 
   return (
-    <button type="button" className={`btn ${small ? "btn-line btn-small" : "btn-ink w-full"}`} onClick={share} aria-live="polite">
+    <button type="button" className={`btn ${small ? "btn-paper btn-small" : "btn-ink w-full"}`} onClick={share} aria-live="polite">
       {copied ? t.common.copied : t.common.share}
     </button>
   );
@@ -255,7 +255,7 @@ function ShareLink({ code, small = false }: { code: string; small?: boolean }) {
 function CreatedInvite({ invite, onAnother }: { invite: Invite; onAnother: () => void }) {
   const { t, fill } = useI18n();
   return (
-    <div className="paper rise mt-4 space-y-4 p-5">
+    <div className="paper rise space-y-4 p-5">
       <div>
         <h3 className="display text-3xl">{t.invites.createdTitle}</h3>
         <p className="mt-2 text-paper-soft">
@@ -282,8 +282,10 @@ function NewInvite({ overview, onCreated }: { overview: InvitesOverview; onCreat
   const [busy, setBusy] = useState(false);
   const [fields, setFields] = useState<Record<string, string>>({});
   const [failure, setFailure] = useState<string | null>(null);
+  const form = useRef<HTMLFormElement>(null);
+  useFirstMistake(form, fields);
 
-  if (!overview.nights.some((n) => n.open)) return <p className="mt-4 text-ink-soft">{t.invites.noNights}</p>;
+  if (!overview.nights.some((n) => n.open)) return <p className="text-ink-soft">{t.invites.noNights}</p>;
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -313,11 +315,8 @@ function NewInvite({ overview, onCreated }: { overview: InvitesOverview; onCreat
   }
 
   return (
-    <form onSubmit={submit} noValidate className="paper mt-4 space-y-4 p-5">
-      <div>
-        <h3 className="display text-3xl">{t.invites.newTitle}</h3>
-        <p className="mt-2 text-paper-soft">{t.invites.newIntro}</p>
-      </div>
+    <form ref={form} onSubmit={submit} noValidate className="paper space-y-4 p-5">
+      <h3 className="display text-3xl">{t.invites.newTitle}</h3>
 
       <FormError code={failure} />
 
@@ -326,9 +325,9 @@ function NewInvite({ overview, onCreated }: { overview: InvitesOverview; onCreat
         <NightPicker nights={overview.nights} value={selected} onChange={setSelected} />
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field label={t.invites.guestFirst} name="firstName" autoComplete="off" required error={fields.firstName} />
-        <Field label={t.invites.guestLast} name="lastName" autoComplete="off" required error={fields.lastName} />
+      <div className="grid grid-cols-2 gap-3">
+        <Field label={t.common.firstName} name="firstName" autoComplete="off" required error={fields.firstName} />
+        <Field label={t.common.lastName} name="lastName" autoComplete="off" required error={fields.lastName} />
       </div>
       <Field
         label={t.common.personalNumber}

@@ -68,15 +68,18 @@ account:
 - `guest` → a form to ask for membership;
 - `banned` → suspended.
 
-Below: invites waiting, passes for coming nights, and the count of nights so far.
+Below: invites waiting, passes for coming nights, and the count of nights so far — once there
+is a night to count.
 
 ## Invites
 
 `(signed)/(member)/invites/invites-screen.tsx`.
 
-- **For you** — invites addressed to this account. Accept, decline, or open the ticket.
+- **For you** — invites addressed to this account. Accept, decline, or open the ticket. Shown
+  only when there is one; with none, the screen is simply the form.
 - **From you** — if the member may invite: the form, then the list of sent invites with their
   state and a way to share or cancel each. If not: why not, and how many nights are left to earn it.
+  The heading itself appears only when "For you" is on screen too.
 - After creating an invite the member sees its link as a QR (the guest can scan it off the
   member's screen) and a share button.
 
@@ -99,7 +102,9 @@ it does not generate dates.
 `(app)/i/[code]/invite-screen.tsx`. No account is needed. The invite is fetched with the page,
 as a door ticket is: someone opening the link sees the ticket in the first paint, not an outline.
 
-- Pending: the invite drawn as the ticket it will become, with Accept and Decline.
+- Pending: the invite drawn as the ticket it will become — the same shape as a member's pass
+  before it is claimed: a dashed window where the code will be, and in it the one button that
+  prints it. Under the ticket, a quiet "I can't come".
 - Accepted: the live ticket, and "keep this page — it is your ticket".
 - The personal number is masked here. The link can be forwarded.
 - The member who sent it sees its state and a link to manage invites — never the guest's QR.

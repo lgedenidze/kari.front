@@ -92,9 +92,9 @@ then remembered: going back to a tab already shown never waits.
 | Tab | File | What |
 |---|---|---|
 | Tonight | `overview.tsx` | Requests waiting; inside, passes, turned away, members; the last 14 nights as a table. |
-| Requests | `requests.tsx` | The review queue, oldest first. Open the Facebook profile, add a note, approve or reject. |
+| Requests | `requests.tsx` | The review queue, oldest first. Open the Facebook profile, then approve with one tap or reject with two: the first opens the note to the guest and a way back. |
 | People | `people.tsx` | Rows to tap on a phone, a table on a desk. Search and filter. A person's page: status, role, inviting, quota, notes for the door, password reset, door history. |
-| Nights | `nights.tsx` | "Add a night" for any date; named and changed nights by name; the next three weeks. |
+| Nights | `nights.tsx` | "Add a night" for any date; named and changed nights by name; the next three weeks, each night a row to tap. |
 | Door log | `log.tsx` | Every decision on one night: records on a phone, a table on a desk. |
 | Settings | `settings.tsx` | Opening days, door hours, the cutoff, capacity, invite defaults. |
 

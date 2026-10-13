@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Face } from "@/components/face";
 import { FormError } from "@/components/field";
 import { RowsSkeleton } from "@/components/loading";
 import { useMe } from "@/components/me";
@@ -78,6 +79,9 @@ function RequestCard({
   const { t, fill, dateTime } = useI18n();
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
+  // "Reject" asks once more, and that is where the note to the guest belongs: a no is the
+  // only answer that has anything to explain, and the only one a slip of the thumb can hurt.
+  const [rejecting, setRejecting] = useState(false);
 
   const act = (decision: "approve" | "reject") => {
     setBusy(true);
@@ -87,10 +91,7 @@ function RequestCard({
   return (
     <li className="paper flex flex-col gap-4 p-5">
       <div className="flex items-start gap-4">
-        {person.hasPhoto && (
-          // eslint-disable-next-line @next/next/no-img-element -- an authenticated API image
-          <img src={`/api/photos/${person.id}`} alt="" className="h-20 w-20 flex-none rounded-2xl border-2 border-ink object-cover" />
-        )}
+        {person.hasPhoto && <Face userId={person.id} className="h-20 w-20 flex-none rounded-2xl border-2 border-ink object-cover" />}
         <div className="min-w-0">
           <h2 className="break-words text-3xl">
             {person.firstName} {person.lastName}
@@ -106,21 +107,35 @@ function RequestCard({
         </a>
       )}
 
-      <label className="block">
-        <span className="label">
-          {t.admin.noteForGuest} <span className="font-normal text-paper-soft">({t.common.optional})</span>
-        </span>
-        <input className="input" value={note} maxLength={500} onChange={(event) => setNote(event.target.value)} />
-      </label>
-
-      <div className="mt-auto grid grid-cols-2 gap-2">
-        <button type="button" className="btn btn-line" disabled={busy} onClick={() => act("reject")}>
-          {t.admin.reject}
-        </button>
-        <button type="button" className="btn btn-ink" disabled={busy} onClick={() => act("approve")}>
-          {t.admin.approve}
-        </button>
-      </div>
+      {rejecting ? (
+        <div className="rise mt-auto space-y-2">
+          <input
+            className="input"
+            value={note}
+            maxLength={500}
+            aria-label={t.admin.noteForGuest}
+            placeholder={t.admin.noteForGuest}
+            onChange={(event) => setNote(event.target.value)}
+          />
+          <div className="grid grid-cols-2 gap-2">
+            <button type="button" className="btn btn-line" disabled={busy} onClick={() => setRejecting(false)}>
+              {t.common.back}
+            </button>
+            <button type="button" className="btn btn-danger" disabled={busy} onClick={() => act("reject")}>
+              {t.admin.reject}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="mt-auto grid grid-cols-2 gap-2">
+          <button type="button" className="btn btn-line" disabled={busy} onClick={() => setRejecting(true)}>
+            {t.admin.reject}
+          </button>
+          <button type="button" className="btn btn-ink" disabled={busy} onClick={() => act("approve")}>
+            {t.admin.approve}
+          </button>
+        </div>
+      )}
     </li>
   );
 }

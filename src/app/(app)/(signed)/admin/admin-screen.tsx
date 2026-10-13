@@ -51,7 +51,7 @@ function AdminFrame({ tab, onTab, children }: { tab: AdminTab; onTab?: (tab: Adm
           <Link href="/pass">
             <VenueMark className="text-[0.95rem]" />
           </Link>
-          <LangToggle />
+          <LangToggle short />
         </div>
         {/* Six tabs do not fit a phone. The row scrolls, fades at its far edge to say so, and
             brings the chosen tab into view. */}

@@ -214,7 +214,6 @@ export async function Landing({ lang }: { lang: Lang }) {
               <li>{t.landing.rule1}</li>
               <li>{fill(t.landing.rule2, { age: venue.minimumAge })}</li>
               <li>{t.landing.rule3}</li>
-              <li>{t.landing.rule4}</li>
             </ul>
           </div>
 

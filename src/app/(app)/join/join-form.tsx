@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type FormEvent } from "react";
-import { Field, FormError } from "@/components/field";
+import { useRef, useState, type FormEvent } from "react";
+import { Field, FormError, useFirstMistake } from "@/components/field";
 import { PhotoPicker } from "@/components/photo-picker";
 import { useI18n } from "@/i18n/provider";
 import { api, isApiError } from "@/lib/api";
@@ -18,6 +18,8 @@ export function JoinForm() {
   const [busy, setBusy] = useState(false);
   const [fields, setFields] = useState<Record<string, string>>({});
   const [failure, setFailure] = useState<string | null>(null);
+  const form = useRef<HTMLFormElement>(null);
+  useFirstMistake(form, fields);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -52,19 +54,19 @@ export function JoinForm() {
   }
 
   return (
-    <form onSubmit={submit} noValidate className="paper rise space-y-5 p-5 sm:p-7">
-      <div>
-        <h1 className="text-4xl">{t.join.title}</h1>
-        <p className="mt-2 text-paper-soft">{t.join.intro}</p>
-      </div>
+    <form ref={form} onSubmit={submit} noValidate className="paper rise space-y-5 p-5 sm:p-7">
+      <h1 className="text-4xl">{t.join.title}</h1>
 
       <FormError code={failure} />
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field label={t.common.firstName} name="firstName" autoComplete="given-name" required error={fields.firstName} />
-        <Field label={t.common.lastName} name="lastName" autoComplete="family-name" required error={fields.lastName} />
+      {/* A name is short: the two halves share a line, on a phone too. */}
+      <div>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label={t.common.firstName} name="firstName" autoComplete="given-name" required error={fields.firstName} />
+          <Field label={t.common.lastName} name="lastName" autoComplete="family-name" required error={fields.lastName} />
+        </div>
+        <p className="hint">{t.join.nameNote}</p>
       </div>
-      <p className="hint !mt-2">{t.join.nameNote}</p>
 
       <Field
         label={t.common.phone}
@@ -74,7 +76,6 @@ export function JoinForm() {
         autoComplete="tel"
         placeholder="555 12 34 56"
         required
-        hint={t.join.phoneHint}
         error={fields.phone}
       />
 

@@ -25,22 +25,28 @@ export function RememberLang({ lang }: { lang: Lang }) {
   return null;
 }
 
-/** The language toggle inside the app, where language is a saved choice rather than a URL. */
-export function LangToggle({ className = "" }: { className?: string }) {
+/**
+ * The language toggle inside the app, where language is a saved choice rather than a URL.
+ * In a top bar it is `short` — a two-letter code, as on the landing page — so it is there for
+ * whoever wants it and out of the way of everyone else. In the profile it is spelled out.
+ */
+export function LangToggle({ className = "", short = false }: { className?: string; short?: boolean }) {
   const { lang } = useI18n();
   const router = useRouter();
   const other: Lang = lang === "ka" ? "en" : "ka";
+  const name = other === "en" ? "English" : "ქართული";
   return (
     <button
       type="button"
       lang={other}
-      className={`btn btn-line btn-small ${className}`}
+      aria-label={short ? name : undefined}
+      className={`btn btn-line btn-small ${short ? "!px-3 opacity-85" : ""} ${className}`}
       onClick={() => {
         saveLang(other);
         router.refresh();
       }}
     >
-      {other === "en" ? "English" : "ქართული"}
+      {short ? (other === "en" ? "EN" : "ქარ") : name}
     </button>
   );
 }
@@ -52,7 +58,7 @@ export function TopBar({ right }: { right?: ReactNode }) {
       <Link href="/" aria-label="NISLI">
         <VenueMark className="text-[0.95rem]" />
       </Link>
-      <div className="flex items-center gap-2">{right ?? <LangToggle />}</div>
+      <div className="flex items-center gap-2">{right ?? <LangToggle short />}</div>
     </header>
   );
 }

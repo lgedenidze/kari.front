@@ -107,10 +107,9 @@ export function PassScreen({ first }: { first: TonightResponse | null }) {
           stubLeft={<StubCode label={t.ticket.code} code="– – –" />}
           poweredBy={t.common.poweredBy}
         >
-          <div className="flex aspect-square w-full flex-col items-center justify-center gap-3 rounded-xl border-[3px] border-dashed border-paper-line px-2 text-center">
-            <PassIcon width={46} height={46} className="text-paper-soft" />
-            <p className="text-sm font-semibold text-paper-soft">{t.pass.codeHere}</p>
-            <button type="button" className="btn btn-ink btn-big mt-1 w-full" onClick={claim} disabled={claiming}>
+          <div className="flex aspect-square w-full flex-col items-center justify-center gap-5 rounded-xl border-[3px] border-dashed border-paper-line px-2 text-center">
+            <PassIcon width={52} height={52} className="text-paper-soft" />
+            <button type="button" className="btn btn-ink btn-big w-full" onClick={claim} disabled={claiming}>
               {claiming ? t.pass.claiming : t.pass.claim}
             </button>
           </div>
@@ -127,7 +126,7 @@ export function PassScreen({ first }: { first: TonightResponse | null }) {
         >
           <div className="flex aspect-square w-full flex-col items-center justify-center gap-2 rounded-xl border-[3px] border-dashed border-paper-line px-3 text-center">
             <p className="display text-3xl">{t.pass.closedTitle}</p>
-            <p className="text-sm text-paper-soft">{tonight.note ?? t.pass.closedBody}</p>
+            {tonight.note && <p className="text-sm text-paper-soft">{tonight.note}</p>}
           </div>
         </TicketCard>
       )}
@@ -166,9 +165,10 @@ export function PassScreen({ first }: { first: TonightResponse | null }) {
         </section>
       )}
 
-      {me.status === "approved" && (
+      {/* Nights so far, once there is one to count. */}
+      {me.status === "approved" && me.visits > 0 && (
         <p className="mt-auto pt-2 text-center text-sm text-ink-soft">
-          {me.visits === 0 ? t.pass.visitsNone : me.visits === 1 ? t.pass.visitsOne : fill(t.pass.visitsMany, { n: me.visits })}
+          {me.visits === 1 ? t.pass.visitsOne : fill(t.pass.visitsMany, { n: me.visits })}
         </p>
       )}
     </div>

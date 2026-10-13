@@ -135,8 +135,8 @@ test("a member invites a named guest, who gets a ticket with no account", async 
 
   // The member fills in the invite: first name, last name, and the optional personal number.
   await host.goto("/invites");
-  await host.getByLabel("Guest's first name").fill("Davit");
-  await host.getByLabel("Guest's last name").fill(`Guest${run}`);
+  await host.getByLabel("First name").fill("Davit");
+  await host.getByLabel("Last name").fill(`Guest${run}`);
   await host.getByLabel("Personal number").fill("01024012345");
   await host.getByRole("button", { name: "Create invite" }).click();
   await expect(host.getByRole("heading", { name: "Invite ready" })).toBeVisible();
@@ -153,7 +153,7 @@ test("a member invites a named guest, who gets a ticket with no account", async 
   await expect(guest.locator(".ticket")).toContainText("••••••••345");
   await expect(guest.locator(".ticket")).not.toContainText("01024012345");
 
-  await guest.getByRole("button", { name: "Accept and get my ticket" }).click();
+  await guest.getByRole("button", { name: "Get my ticket" }).click();
   const token = await tokenOnScreen(guest);
 
   // At the door: the name, the full personal number to check against an ID, and who vouched.
@@ -252,6 +252,13 @@ test("an admin names a night, and members see it by name", async ({ browser }) =
   await expect(named).toBeVisible();
   await expect(named).toContainText("Doors at ten");
 
+  // In the plain schedule under it, that night is still one row of two lines: the date with
+  // its name, then its hours and its note. At phone size the name used to wrap under the
+  // hours and run into them (BUG-0006).
+  const scheduled = admin.locator("section[aria-labelledby='schedule'] li", { hasText: title });
+  await expect(scheduled).toContainText("Doors at ten");
+  expect((await scheduled.boundingBox())!.height).toBeLessThan(80);
+
   // A member who can invite sees that night by name in the invite calendar.
   const member = await (await english(browser)).newPage();
   const me = await (
@@ -348,6 +355,13 @@ test("an admin sees how many requests are waiting, on the dock and on the reques
   // An answer takes it out of the count at once, with no reload.
   await admin.getByRole("navigation", { name: "Back office" }).getByRole("button", { name: /Requests/ }).click();
   const request = admin.locator("li", { has: admin.getByRole("heading", { name: `Queue ${last}` }) });
+  // A no is asked for twice: the first tap opens the note to the guest and a way back.
+  await request.getByRole("button", { name: "Reject" }).click();
+  await expect(request.getByPlaceholder("Note for the guest")).toBeVisible();
+  await request.getByRole("button", { name: "Back" }).click();
+  await expect(request.getByRole("button", { name: "Approve" })).toBeVisible();
+  expect(await waiting()).toBe(start + 1);
+  await request.getByRole("button", { name: "Reject" }).click();
   await request.getByRole("button", { name: "Reject" }).click();
   await expect(request).toBeHidden();
   await expect(onTab).toHaveAttribute("data-count", String(start));

@@ -67,10 +67,7 @@ export function NightsTab() {
   return (
     <div className="space-y-9">
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="title">{t.admin.navNights}</h1>
-          <p className="mt-2 max-w-xl text-desk-soft">{t.admin.nightAddIntro}</p>
-        </div>
+        <h1 className="title">{t.admin.navNights}</h1>
         {!adding && (
           <button type="button" className="btn btn-ink btn-big px-7" onClick={() => setAdding(true)}>
             {t.admin.nightAdd}
@@ -147,28 +144,39 @@ export function NightsTab() {
         <h2 id="schedule" className="text-2xl">
           {t.admin.nightSchedule}
         </h2>
-        <p className="mt-1 max-w-xl text-desk-soft">{t.admin.nightsIntro}</p>
         <ul className="mt-3 divide-y divide-desk-line rounded-2xl border-2 border-desk-line bg-white">
           {schedule.map((info) => (
-            <li key={info.night} className="px-4 py-3.5">
+            <li key={info.night}>
               {editing === info.night && !info.overridden ? (
-                <NightForm nights={nights} night={info.night} onSaved={done} onCancel={() => setEditing(null)} />
-              ) : (
-                <div className="flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="font-bold">
-                      {night(info.night, "long")}
-                      {info.title && <span className="font-normal">, {info.title}</span>}
-                    </p>
-                    {info.note && <p className="truncate text-sm text-desk-soft">{info.note}</p>}
-                  </div>
-                  <div className="flex flex-none items-center gap-2">
-                    <span className={`chip ${info.open ? "text-stamp-green" : "text-desk-soft"}`}>{hours(info)}</span>
-                    <button type="button" className="btn btn-line btn-small" onClick={() => setEditing(info.night)}>
-                      {t.admin.nightEdit}
-                    </button>
-                  </div>
+                <div className="px-4 py-3.5">
+                  <NightForm nights={nights} night={info.night} onSaved={done} onCancel={() => setEditing(null)} />
                 </div>
+              ) : (
+                // The whole row opens the night, as a person's row opens the person: twenty-one
+                // "Edit" buttons in a column were twenty-one too many. Two lines that each stay
+                // whole — the date with the night's name, then its hours. On a phone the date is
+                // the short one; the long one broke into three lines and ran under the hours.
+                <button
+                  type="button"
+                  onClick={() => setEditing(info.night)}
+                  aria-label={`${t.admin.nightEdit}: ${night(info.night, "long")}`}
+                  className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-desk active:bg-desk"
+                >
+                  <span className="min-w-0">
+                    <span className="block truncate font-bold">
+                      <span className="sm:hidden">{night(info.night)}</span>
+                      <span className="hidden sm:inline">{night(info.night, "long")}</span>
+                      {info.title && <span className="font-normal">, {info.title}</span>}
+                    </span>
+                    <span className="block truncate text-sm">
+                      <span className={`tabular font-semibold ${info.open ? "text-stamp-green" : "text-desk-soft"}`}>{hours(info)}</span>
+                      {info.note && <span className="text-desk-soft">, {info.note}</span>}
+                    </span>
+                  </span>
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="flex-none text-desk-soft">
+                    <path d="m9 5.5 6.5 6.5L9 18.5" />
+                  </svg>
+                </button>
               )}
             </li>
           ))}
