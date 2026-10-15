@@ -495,6 +495,8 @@ function ResultSheet({
                   </dd>
                 </div>
               )}
+              {/* A member through someone's permanent invite: whose word let them in. */}
+              {person.invitedBy && <dd className="font-bold">{fill(t.door.invitedBy, { name: person.invitedBy })}</dd>}
               {person.lastVisit && <dd className="text-paper-soft">{fill(t.door.lastHere, { date: night(person.lastVisit) })}</dd>}
               {person.denials > 0 && (
                 <dd className="font-bold text-stamp-red">{fill(t.door.deniedBefore, { n: person.denials })}</dd>

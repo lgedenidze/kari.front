@@ -137,6 +137,10 @@ test("a member invites a named guest, who gets a ticket with no account", async 
 
   // The member fills in the invite: first name, last name, and the optional personal number.
   await host.goto("/invites");
+  // No calendar of nights: an invite is for tonight, and the form says what tonight holds.
+  // A member the bar has not chosen for permanent invites has no choice to make.
+  await expect(host.getByRole("radiogroup")).toHaveCount(0);
+  await expect(host.getByText("2 invites left tonight")).toBeVisible();
   // The whole form is on the first screen: the button is in view before anything is typed.
   await expect(host.getByRole("button", { name: "Create invite" })).toBeInViewport({ ratio: 1 });
   await host.getByLabel("First name").fill("Davit");
@@ -338,13 +342,76 @@ test("the landing page offers a member their pass, and a guest their ticket, whe
   await guest.waitForURL(`**/t/${ticketToken}`);
 });
 
+test("a member the bar trusts makes a guest a member with a permanent invite", async ({ browser }) => {
+  const last = `Sponsor${run}`;
+
+  // A member, approved, whom the bar hands permanent invites from the back office: one tap.
+  const host = await (await english(browser)).newPage();
+  const me = await (
+    await host.request.post("/api/auth/register", {
+      data: {
+        firstName: "Nana", lastName: last, phone: newPhone(), password: PASSWORD,
+        profileUrl: `nana.sponsor.${run}`, lang: "en", adult: true, consent: true,
+      },
+    })
+  ).json();
+  const admin = await signIn(browser, seed.AdminPhone, seed.AdminPassword);
+  expect((await admin.request.post(`/api/admin/users/${me.id}/review`, { data: { decision: "approve" } })).ok()).toBe(true);
+  await admin.goto("/admin#people");
+  await admin.getByRole("searchbox").fill(last);
+  await admin.getByRole("button", { name: new RegExp(`Nana ${last}`) }).first().click();
+  const permanent = admin.getByRole("switch", { name: "Can invite permanent members" });
+  await expect(permanent).not.toBeChecked();
+  await permanent.click();
+  await expect(permanent).toBeChecked();
+
+  // Tonight or permanent: permanent asks for the guest's phone, and nothing else changes.
+  await host.goto("/invites");
+  const form = host.locator("form[aria-labelledby='new-invite']");
+  await form.getByRole("radio", { name: "Permanent" }).click();
+  await form.getByLabel("First name").fill("Gvantsa");
+  await form.getByLabel("Last name").fill(`Joined${run}`);
+  const guestPhone = newPhone();
+  await form.getByLabel("Phone").fill(guestPhone);
+  await form.getByRole("button", { name: "Create invite" }).click();
+  const ready = host.getByRole("dialog", { name: "Invite ready" });
+  await expect(ready).toContainText("Permanent");
+  const link = await ready.locator("svg[data-value*='/i/']").getAttribute("data-value");
+  await ready.getByRole("button", { name: "Close" }).click();
+
+  // The guest opens it with no account and signs up right there, in the invite's name.
+  const guest = await (await english(browser)).newPage();
+  await guest.goto(new URL(link!).pathname);
+  await expect(guest.getByRole("heading", { name: `Nana ${last} invites you to be a member` })).toBeVisible();
+  const signUp = guest.locator("form[aria-labelledby='join-from-invite']");
+  await signUp.getByLabel("Password", { exact: true }).fill(PASSWORD);
+  for (const box of await signUp.getByRole("checkbox").all()) await box.check();
+
+  // Another number makes nobody a member.
+  await signUp.getByLabel("Phone number").fill(newPhone());
+  await signUp.getByRole("button", { name: "Become a member" }).click();
+  await expect(signUp).toContainText("This invite was sent to another phone number.");
+
+  // The invited number: a member at once, on the pass.
+  await signUp.getByLabel("Phone number").fill(guestPhone);
+  await signUp.getByRole("button", { name: "Become a member" }).click();
+  await guest.waitForURL("**/pass");
+  const joined = await (await guest.request.get("/api/me")).json();
+  expect(joined.status).toBe("approved");
+  expect(`${joined.firstName} ${joined.lastName}`).toBe(`Gvantsa Joined${run}`);
+
+  // The member sees what the invite became.
+  await host.reload();
+  await expect(host.locator("li", { hasText: `Joined${run}` })).toContainText("Member");
+});
+
 test("an admin names a night, and members see it by name", async ({ browser }) => {
   const title = `Opening ${run}`;
 
-  // Six nights from now, as the API counts nights.
+  // Tonight, as the API counts nights: members invite for tonight only, so that is the night
+  // whose name their invite form shows.
   const admin = await signIn(browser, seed.AdminPhone, seed.AdminPassword);
-  const week = (await (await admin.request.get("/api/public/venue")).json()).week as { night: string }[];
-  const date = week[6].night;
+  const date = ((await (await admin.request.get("/api/public/venue")).json()).tonight as { night: string }).night;
 
   // The admin adds the night from the back office: pick a date, give it a name, save.
   await admin.goto("/admin#nights");
@@ -365,7 +432,7 @@ test("an admin names a night, and members see it by name", async ({ browser }) =
   await expect(scheduled).toContainText("Doors at ten");
   expect((await scheduled.boundingBox())!.height).toBeLessThan(80);
 
-  // A member who can invite sees that night by name in the invite calendar.
+  // A member who can invite sees tonight by its name, where the form says what tonight is.
   const member = await (await english(browser)).newPage();
   const me = await (
     await member.request.post("/api/auth/register", {
@@ -379,10 +446,7 @@ test("an admin names a night, and members see it by name", async ({ browser }) =
   expect((await admin.request.patch(`/api/admin/users/${me.id}`, { data: { inviteMode: "on" } })).ok()).toBe(true);
 
   await member.goto("/invites");
-  const special = member.getByRole("button", { name: new RegExp(title) }).last();
-  await expect(special).toBeVisible();
-  await special.click();
-  await expect(member.locator("[aria-live='polite']", { hasText: title })).toContainText("Doors at ten");
+  await expect(member.locator("form[aria-labelledby='new-invite']")).toContainText(title);
 
   // The admin opens it for editing: the form starts from what was saved.
   // (Once the form is open the name is a field's value, not text, so the card is found by
@@ -524,6 +588,23 @@ test("what the bar changes about a person reaches the app they already have open
   await lookAgain();
   await expect(dock.getByRole("link", { name: "Office" })).toBeVisible();
 
+  // An admin always invites: there is no switch to flip, and no number per night.
+  await dock.getByRole("link", { name: "Invites" }).click();
+  await expect(person.getByRole("button", { name: "Create invite" })).toBeVisible();
+  await expect(admin.getByText("Admins can always invite")).toBeVisible();
+  await expect(admin.getByRole("switch", { name: "Can invite guests" })).toHaveCount(0);
+
+  // Back to a plain member while they stand at the door's scanner: that screen is no longer
+  // theirs, so they are taken to their pass, and the dock has only a member's tabs again.
+  await dock.getByRole("link", { name: "Door" }).click();
+  await person.waitForURL("**/door");
+  await admin.getByRole("radio", { name: "Member" }).click();
+  await expect(admin.getByRole("radio", { name: "Member" })).toBeChecked();
+  await lookAgain();
+  await person.waitForURL("**/pass");
+  await expect(dock.getByRole("link", { name: "Door" })).toHaveCount(0);
+  await expect(dock.getByRole("link", { name: "Office" })).toHaveCount(0);
+
   // Inviting is a permission, and a member has it from the day they are approved: nobody
   // switched it on for this one, and nothing had to be earned first.
   await dock.getByRole("link", { name: "Invites" }).click();
@@ -536,17 +617,6 @@ test("what the bar changes about a person reaches the app they already have open
   await expect(invites).not.toBeChecked();
   await expect(person.getByText("Inviting is switched off for your account.")).toBeVisible({ timeout: 15_000 });
   await expect(person.getByRole("button", { name: "Create invite" })).toHaveCount(0);
-
-  // Back to a plain member while they stand at the door's scanner: that screen is no longer
-  // theirs, so they are taken to their pass, and the dock has only a member's tabs again.
-  await dock.getByRole("link", { name: "Door" }).click();
-  await person.waitForURL("**/door");
-  await admin.getByRole("radio", { name: "Member" }).click();
-  await expect(admin.getByRole("radio", { name: "Member" })).toBeChecked();
-  await lookAgain();
-  await person.waitForURL("**/pass");
-  await expect(dock.getByRole("link", { name: "Door" })).toHaveCount(0);
-  await expect(dock.getByRole("link", { name: "Office" })).toHaveCount(0);
 });
 
 test("a link opens in Georgian on a phone that has not chosen a language", async ({ browser }) => {

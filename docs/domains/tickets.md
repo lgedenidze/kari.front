@@ -75,37 +75,44 @@ is a night to count.
 ## Inviting a guest
 
 `(signed)/(member)/invites/invites-screen.tsx`. Rebuilt on 2026-10-13, on the owner's word that
-the screen was hard to use.
+the screen was hard to use. Rebuilt again on 2026-10-15: no nights to choose from ("hide nights
+part they dont need that nights thing"), and permanent invites for the members the bar chooses.
 
-Inviting is three things, in the order a member thinks of them: **who, which night, send.**
+Inviting is two things, in the order a member thinks of them: **who, then send.** An invite is
+for tonight, or — for a member the bar has chosen — permanent: the guest becomes a member.
 
-- **The form** is a name (two fields on one line), a row of nights and one button. All of it is
-  in view on a 360px phone before anything is typed; a test holds it to that.
-- **The row of nights** (`components/night-picker.tsx`) replaced a two-week calendar and a
-  second list of named nights. Only nights the bar is open are on it, the nearest first.
-  Tonight says "Today". Every night is the same small block — the weekday over the day of the
-  month — so the dates line up along the row. A named night is that block as the stub of a
-  ticket, with a dashed tear line and its name on the ticket beside it: the headline cut, two
-  lines at most, then an ellipsis. A night with no invites left is a dashed, empty outline.
-  It can still be tapped: the line under the row then says there is nothing left to send,
-  in red, and the button is off. Under the row: the chosen night in full — date, name, note,
-  invites left. The row scrolls sideways and fades at its far edge. The API sends the nights
-  (`InvitesOverview.nights`); the row does not generate dates.
+- **The form** is a name (two fields on one line), the one choice when there is one, and one
+  button. All of it is in view on a 360px phone before anything is typed; a test holds it to
+  that.
+- **Tonight / Permanent** — two buttons side by side, only for a member who may send permanent
+  invites (`canInvitePermanent`, from the API; admins always). Everyone else has no choice to
+  make and sees none. Under it, one line: for tonight, tonight's date, its name if it has one,
+  and the invites left ("2 invites left tonight"; no count for an admin, who has no limit; in
+  red with the button off when none are left); for permanent, what it means — they become a
+  member, with a card for every night. With the bar closed tonight the line says so; a member
+  who may send permanent invites starts on Permanent, anyone else sees that one line instead of
+  the form. There was a row of nights here until 2026-10-15 (`components/night-picker.tsx`,
+  now gone): the bar did not want guests invited for other nights.
 - **The personal number and the phone** are folded behind one line, "+ Personal number or
-  phone". They unfold by themselves when the API finds a mistake in one.
-- **What comes back is a sheet** over the whole screen: the guest's name, the night, the link
-  as a QR to scan off the member's phone, and one large Share button. The invite is not done
-  until the guest has it, so that is all there is until the member closes the sheet. Behind
-  it the form is empty again. Sharing sends a line of words with the link — "Invite: KARI,
-  Fri 16 Oct" — so the guest's chat shows what it is.
+  phone". They unfold by themselves when the API finds a mistake in one. A permanent invite
+  needs the phone — only the account with that number can accept — so nothing is folded then.
+- **What comes back is a sheet** over the whole screen: the guest's name, the night (or
+  "Permanent", and until when it can be answered), the link as a QR to scan off the member's
+  phone, and one large Share button. The invite is not done until the guest has it, so that is
+  all there is until the member closes the sheet. Behind it the form is empty again. Sharing
+  sends a line of words with the link — "Invite: KARI, Fri 16 Oct", or "Membership invite:
+  KARI" — so the guest's chat shows what it is.
 - **Sent** — under the form: each invite with its state, Share, and Cancel (asked for twice).
+  An accepted permanent invite says "Member" and has no Cancel: a membership is the bar's to
+  end.
 - **For you** — above the form, only when there is an invite. Accept goes straight to the
-  pass, where the ticket is. Decline is asked for twice: an invite cannot be accepted again.
+  pass, where the ticket is — or, for a permanent invite, the member's own pass. Decline is
+  asked for twice: an invite cannot be accepted again.
 - **Not allowed to invite** — one line in place of the form. Inviting is a permission every
-  member has until the bar switches it off for them (`me.canInvite`, from the API); someone
-  who is not a member yet is told it is for members. There is nothing to count towards. An
-  admin's switch reaches the open screen within seconds: the invites are asked for again
-  every 8.
+  member has until the bar switches it off for them (`me.canInvite`, from the API), and every
+  admin has always; someone who is not a member yet is told it is for members. There is
+  nothing to count towards. An admin's switch reaches the open screen within seconds: the
+  invites are asked for again every 8.
 
 ## The invite link
 
@@ -117,8 +124,22 @@ as a door ticket is: someone opening the link sees the ticket in the first paint
   prints it. The caption says when the doors are open that night. Under the ticket, a quiet
   "I can't come", which asks once more before it gives the ticket up.
 - Accepted: the live ticket, and "keep this page — it is your ticket".
-- The personal number is masked here. The link can be forwarded.
+- The personal number and the phone are masked here. The link can be forwarded.
 - The member who sent it sees its state and a link to manage invites — never the guest's QR.
+
+A **permanent** invite asks the guest to become a member, so the page asks whoever opened it
+for exactly what they lack (`MembershipInvite` in the same file):
+
+- No account: the card it will become (the name, "Member", for every night), and under it a
+  sign-up form with only what is missing — phone, password, the two checkboxes. The name is
+  the invite's and is not asked for. The phone field says which number the invite was sent
+  to, by its last three digits. The API makes the account and the membership together, or
+  neither: another number gets "This invite was sent to another phone number" and leaves no
+  account behind. "Already have an account? Sign in" comes back to this page.
+- Signed in with the invited number: the same card, with **Become a member** in it. One tap,
+  then the pass.
+- Signed in with another number: one notice — this invite is for another number.
+- Accepted: "You are a member", and the way to the pass.
 
 ## Keeping a ticket
 
@@ -262,7 +283,10 @@ an iPhone's Wallet says, and carry the same code, so the door needs to know noth
   `google-api.test.ts`), and the button and the redirect in a browser
   (`e2e/ticket-image.spec.ts`). **Google itself has never been asked with a real key:** the
   bar had no issuer account when this was written. The first real tap is the first test;
-  if Google refuses the pass, its reason is in the server's log.
+  if Google refuses the pass, its reason is in the server's log. (With a stand-in key on a
+  developer's machine the browser test does reach Google's token service, which answers
+  "account not found"; the route then sends the pass whole in the link. With no network it
+  waits out six seconds per request first — a slow test, not a broken one.)
 - **"Added to Wallet"** is remembered by the phone exactly as for Apple's.
 
 ### Download ticket

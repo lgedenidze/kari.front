@@ -6,6 +6,8 @@ export type InviteMode = "auto" | "on" | "off";
 export type PassKind = "member" | "guest" | "door";
 export type PassStatus = "active" | "revoked";
 export type InviteState = "pending" | "accepted" | "declined" | "revoked" | "expired";
+/** night: a guest for one night. permanent: the guest becomes a member. */
+export type InviteKind = "night" | "permanent";
 export type Decision = "admitted" | "denied";
 /** What a row of the door's log records: a decision, or an admission that was taken back. */
 export type EntryDecision = Decision | "undone";
@@ -96,6 +98,8 @@ export interface TicketResponse {
 export interface Invite {
   id: string;
   code: string;
+  kind: InviteKind;
+  /** The night a night invite is for; the night a permanent invite was sent on. */
   night: string;
   nightTitle: string | null;
   guestFirstName: string;
@@ -107,22 +111,27 @@ export interface Invite {
   createdAt: string;
   respondedAt: string | null;
   admitted: boolean;
+  /** The last night it can be answered on. */
+  answerBy: string;
 }
 
-/** One night in the invite calendar. Closed nights are included, with nothing remaining. */
+/** Tonight, as the invite form needs it. */
 export interface InviteNight {
   night: string;
   open: boolean;
   title: string | null;
   note: string | null;
   used: number;
-  remaining: number;
+  /** Null for an admin, who has no limit. */
+  remaining: number | null;
 }
 
 export interface InvitesOverview {
   canInvite: boolean;
-  quota: number;
-  nights: InviteNight[];
+  /** Guests per night. Null for an admin, who has no limit. */
+  quota: number | null;
+  canInvitePermanent: boolean;
+  tonight: InviteNight;
   sent: Invite[];
   received: Invite[];
 }
@@ -134,6 +143,9 @@ export interface InviteLinkResponse {
   ticket: Ticket | null;
   viewerIsInviter: boolean;
   night: NightInfo;
+  signedIn: boolean;
+  /** The signed-in account is the one the invite is for, by its phone. */
+  viewerIsInvitee: boolean;
 }
 
 export interface PersonCard {
@@ -149,6 +161,8 @@ export interface PersonCard {
   lastVisit: string | null;
   denials: number;
   staffNotes: string | null;
+  /** The member whose permanent invite made this person a member. */
+  invitedBy: string | null;
 }
 
 export interface PassCard {
@@ -250,6 +264,7 @@ export interface AdminUser {
   staffNotes: string | null;
   createdAt: string;
   visits: number;
+  mayInvitePermanent: boolean;
 }
 
 export interface AdminUserDetail {
@@ -260,6 +275,9 @@ export interface AdminUserDetail {
   canInvite: boolean;
   effectiveQuota: number;
   entries: Entry[];
+  canInvitePermanent: boolean;
+  /** The member whose permanent invite made this person a member. */
+  invitedBy: { id: string; name: string } | null;
 }
 
 export interface UserPage {

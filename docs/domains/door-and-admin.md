@@ -65,7 +65,8 @@ A full-screen sheet over everything, including the dock.
 3. The person: photo, name large, status, the pass's short code, nights so far (for an
    account only — nobody counts the nights of a guest with none, and the card does not guess
    "first time here"); that they are in, under any verdict but "already in"; the personal
-   number in a box marked "check this against their ID"; who invited them; last visit; times
+   number in a box marked "check this against their ID"; who invited them (a guest), or whose
+   permanent invite made them a member ("Invited by"); last visit; times
    turned away before; staff notes; a button to open their profile, named for the network it is
    on ("Open Instagram"; for a network the app has no name for, the host itself).
 4. Two large buttons: **Deny** and **Admit**. Deny asks for a reason from six, in one more tap.
@@ -153,8 +154,12 @@ appears at the top of the page, in the same place every time.
 - **Role** — three buttons side by side: Member, Door, Admin. The line under them names what
   that role finds in the dock, in the dock's own words.
 - **Can invite guests** — a switch, on for every member unless it was switched off here.
-  While it is on, the number of guests per night is beside it, with a minus and a plus. Only
-  an approved member has this row.
+  While it is on, the number of guests per night is beside it, with a minus and a plus, and
+  under it a second switch, **Can invite permanent members**: off until it is switched on
+  here, for the few the bar trusts to make members. Only an approved member has these rows.
+  An admin has none of them: one line says an admin can always invite — tonight's guests
+  with no limit, and permanent members.
+- **Invited by** — under the name, for a member made by someone's permanent invite.
 - **Status** — a list. Suspending is asked for twice, in place: it voids the person's passes
   and invites and cannot be taken back.
 - **Notes for the door** are typed, so they alone have a Save button, which appears when the
@@ -173,7 +178,7 @@ Two jobs, kept apart on purpose:
 
 - **Add a night** — pick any date from tonight on, give it a name, a note, a capacity, or close
   it. A named night can be edited or **deleted**; deleting asks once, in place, and puts the
-  night back on the weekly schedule. Named nights show to guests by name on the pass, the invite calendar and the ticket.
+  night back on the weekly schedule. Named nights show to guests by name on the pass, the invite form (tonight's) and the ticket.
 - **The next three weeks** — the plain schedule, where any single night can be edited.
 
 A night that has been named or changed is listed at the top, even when it is months ahead.

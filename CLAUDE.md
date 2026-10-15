@@ -51,7 +51,7 @@ src/
     …/wallet.pkpass/     the ticket for an iPhone's Wallet, beside each picture
     …/google-wallet/     the same for an Android phone: a redirect to Google with a signed link
     sitemap.ts robots.ts icon.svg apple-icon.png
-  components/            ticket, live-ticket, stamp, qr, night-picker, app-chrome (dock), brand, icons, face,
+  components/            ticket, live-ticket, stamp, qr, app-chrome (dock), brand, icons, face,
                          decision-chip (what the door wrote down, in every list of its records),
                          return-action (the landing page's action for someone who comes back),
                          loading (skeletons), use-live (a screen's data), save-to-phone

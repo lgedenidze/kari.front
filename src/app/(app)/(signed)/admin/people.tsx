@@ -206,12 +206,54 @@ function Sign({ plus = false }: { plus?: boolean }) {
   );
 }
 
+/** A yes or no the bar decides about a person, saved by the tap that flips it. */
+function SwitchRow({
+  label,
+  hint,
+  checked,
+  disabled,
+  onToggle,
+}: {
+  label: string;
+  hint?: string;
+  checked: boolean;
+  disabled: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        disabled={disabled}
+        onClick={onToggle}
+        className="flex min-h-14 w-full items-center justify-between gap-4 px-4 text-left font-bold active:bg-desk"
+      >
+        {label}
+        <span
+          className={`relative h-8 w-14 flex-none rounded-full border-2 border-ink transition-colors ${checked ? "bg-ink" : "bg-white"}`}
+          aria-hidden="true"
+        >
+          <span
+            className={`absolute top-1/2 h-5 w-5 -translate-y-1/2 rounded-full transition-[left] ${
+              checked ? "left-[1.7rem] bg-paper-light" : "left-1 bg-ink"
+            }`}
+          />
+        </span>
+      </button>
+      {hint && <p className="px-4 pb-3.5 text-sm text-desk-soft">{hint}</p>}
+    </>
+  );
+}
+
 /** What an admin can change about a person. One of these goes with each tap. */
 interface Change {
   role?: UserRole;
   status?: UserStatus;
   inviteMode?: "on" | "off";
   inviteQuota?: number;
+  mayInvitePermanent?: boolean;
   staffNotes?: string;
 }
 
@@ -290,6 +332,7 @@ function PersonDetail({ id, onBack }: { id: string; onBack: () => void }) {
   const status = suspending ? "banned" : (sending?.status ?? user.status);
   const invites = sending?.inviteMode ? sending.inviteMode === "on" : user.inviteMode !== "off";
   const perNight = sending?.inviteQuota ?? detail.effectiveQuota;
+  const permanent = sending?.mayInvitePermanent ?? user.mayInvitePermanent;
   const notesNow = notes ?? user.staffNotes ?? "";
   const notesChanged = notes !== null && notes.trim() !== (user.staffNotes ?? "");
 
@@ -325,6 +368,8 @@ function PersonDetail({ id, onBack }: { id: string; onBack: () => void }) {
             {`. ${fill(t.door.nights, { n: user.visits })}`}
             {detail.invitesSent > 0 && `. ${fill(t.admin.invitesSent, { n: detail.invitesSent })}`}
           </p>
+          {/* A member through someone's permanent invite: whose word it was. */}
+          {detail.invitedBy && <p className="mt-1 text-sm font-bold">{fill(t.admin.invitedBy, { name: detail.invitedBy.name })}</p>}
           {user.profileUrl && (
             <a href={user.profileUrl} target="_blank" rel="noopener" className="link mt-2 inline-block">
               {fill(t.common.openProfile, { platform: networkOf(user.profileUrl) })}
@@ -361,29 +406,18 @@ function PersonDetail({ id, onBack }: { id: string; onBack: () => void }) {
           <p className="hint">{t.roleOpens[role]}</p>
         </div>
 
-        {/* Bringing guests is for members, so there is nothing to switch for anyone else. */}
-        {user.status === "approved" && (
+        {/* An admin always invites, with no number to set: there is nothing to switch. Bringing
+            guests is otherwise for members, so there is nothing to switch for anyone else. */}
+        {role === "admin" ? (
+          <p className="px-4 py-3.5 font-semibold text-desk-soft">{t.admin.adminInvites}</p>
+        ) : user.status === "approved" && (
           <div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={invites}
+            <SwitchRow
+              label={t.admin.invitesLabel}
+              checked={invites}
               disabled={busy}
-              onClick={() => change({ inviteMode: invites ? "off" : "on" })}
-              className="flex min-h-14 w-full items-center justify-between gap-4 px-4 text-left font-bold active:bg-desk"
-            >
-              {t.admin.invitesLabel}
-              <span
-                className={`relative h-8 w-14 flex-none rounded-full border-2 border-ink transition-colors ${invites ? "bg-ink" : "bg-white"}`}
-                aria-hidden="true"
-              >
-                <span
-                  className={`absolute top-1/2 h-5 w-5 -translate-y-1/2 rounded-full transition-[left] ${
-                    invites ? "left-[1.7rem] bg-paper-light" : "left-1 bg-ink"
-                  }`}
-                />
-              </span>
-            </button>
+              onToggle={() => change({ inviteMode: invites ? "off" : "on" })}
+            />
             {invites && (
               <div className="flex items-center justify-between gap-4 px-4 pb-3.5">
                 <span className="font-semibold text-desk-soft" id="per-night">
@@ -412,6 +446,17 @@ function PersonDetail({ id, onBack }: { id: string; onBack: () => void }) {
                     <Sign plus />
                   </button>
                 </span>
+              </div>
+            )}
+            {invites && (
+              <div className="border-t-2 border-desk-line">
+                <SwitchRow
+                  label={t.admin.permanentLabel}
+                  hint={t.admin.permanentHint}
+                  checked={permanent}
+                  disabled={busy}
+                  onToggle={() => change({ mayInvitePermanent: !permanent })}
+                />
               </div>
             )}
           </div>

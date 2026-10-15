@@ -6,12 +6,11 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Field, FormError, useFirstMistake } from "@/components/field";
 import { RowsSkeleton } from "@/components/loading";
 import { useMe } from "@/components/me";
-import { NightPicker } from "@/components/night-picker";
 import { Qr } from "@/components/qr";
 import { refreshLive, useLive } from "@/components/use-live";
 import { useI18n } from "@/i18n/provider";
 import { api, isApiError } from "@/lib/api";
-import type { Invite, InviteLinkResponse, InvitesOverview } from "@/lib/types";
+import type { Invite, InviteKind, InviteLinkResponse, InvitesOverview } from "@/lib/types";
 import { venue } from "@/venue";
 
 /** Invites on their way: the title is already true, so it is already there. */
@@ -26,10 +25,12 @@ export function InvitesSkeleton() {
 }
 
 /**
- * Inviting a guest is three things, in the order a member thinks of them: who, which night,
- * send. So the screen is the form, and the form is a name, a row of nights and one button —
- * all of it in view at once. What comes back is a sheet with the link to send: the job is not
- * done until the guest has it, so that is the only thing on screen until the member says so.
+ * Inviting a guest is two things, in the order a member thinks of them: who, then send. An
+ * invite is for tonight — the bar did not want a calendar of nights — or, for members the bar
+ * has chosen, permanent: the guest becomes a member. So the screen is the form, and the form
+ * is a name, that one choice when there is one, and one button, all in view at once. What
+ * comes back is a sheet with the link to send: the job is not done until the guest has it,
+ * so that is the only thing on screen until the member says so.
  */
 export function InvitesScreen({ first }: { first: InvitesOverview | null }) {
   const { t, error } = useI18n();
@@ -121,8 +122,12 @@ export function InvitesScreen({ first }: { first: InvitesOverview | null }) {
   );
 }
 
-function stateLabel(t: ReturnType<typeof useI18n>["t"], invite: Invite): string {
+type I18n = ReturnType<typeof useI18n>;
+
+function stateLabel(t: I18n["t"], invite: Invite): string {
   if (invite.admitted) return t.invites.stateAdmitted;
+  // An accepted permanent invite is a membership: say what it became.
+  if (invite.kind === "permanent" && invite.status === "accepted") return t.invites.stateMember;
   return {
     pending: t.invites.statePending,
     accepted: t.invites.stateAccepted,
@@ -132,7 +137,13 @@ function stateLabel(t: ReturnType<typeof useI18n>["t"], invite: Invite): string 
   }[invite.status];
 }
 
-function nightLine(invite: Invite, night: (n: string, s?: "short" | "long") => string, style: "short" | "long" = "long"): string {
+/** When an invite is for: its night, with the night's name — or "Permanent", and while it waits, until when. */
+function whenLine({ t, fill, night }: I18n, invite: Invite, style: "short" | "long" = "long"): string {
+  if (invite.kind === "permanent") {
+    return invite.status === "pending"
+      ? `${t.invites.permanentLine}, ${fill(t.invites.answerBy, { date: night(invite.answerBy, "short") })}`
+      : t.invites.permanentLine;
+  }
   return invite.nightTitle ? `${night(invite.night, style)}, ${invite.nightTitle}` : night(invite.night, style);
 }
 
@@ -145,7 +156,9 @@ function ReceivedInvite({
   onAccept: () => Promise<void>;
   onDecline: () => Promise<void>;
 }) {
-  const { t, fill, night } = useI18n();
+  const i18n = useI18n();
+  const { t, fill } = i18n;
+  const permanent = invite.kind === "permanent";
   const [busy, setBusy] = useState(false);
   // Saying no cannot be taken back, and its button sits beside "accept": it is asked for twice.
   const [declining, setDeclining] = useState(false);
@@ -159,8 +172,8 @@ function ReceivedInvite({
 
   return (
     <li className="paper p-5">
-      <p className="text-sm font-bold text-paper-soft">{nightLine(invite, night)}</p>
-      <h3 className="mt-1 text-xl">{fill(t.invites.invitedYou, { name: invite.inviterName })}</h3>
+      <p className="text-sm font-bold text-paper-soft">{whenLine(i18n, invite)}</p>
+      <h3 className="mt-1 text-xl">{fill(permanent ? t.invites.invitedYouMember : t.invites.invitedYou, { name: invite.inviterName })}</h3>
       <p className="mt-1 text-paper-soft">
         {invite.guestFirstName} {invite.guestLastName}
       </p>
@@ -186,7 +199,7 @@ function ReceivedInvite({
             {t.invites.decline}
           </button>
         </div>
-      ) : invite.status === "accepted" ? (
+      ) : invite.status === "accepted" && !permanent ? (
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <Link href={`/i/${invite.code}`} className="btn btn-ink flex-1">
             {t.invites.openTicket}
@@ -205,9 +218,12 @@ function ReceivedInvite({
 }
 
 function SentInvite({ invite, onRevoke }: { invite: Invite; onRevoke: () => void }) {
-  const { t, night } = useI18n();
+  const i18n = useI18n();
+  const { t } = i18n;
   const [confirming, setConfirming] = useState(false);
-  const open = (invite.status === "pending" || invite.status === "accepted") && !invite.admitted;
+  const permanent = invite.kind === "permanent";
+  // An accepted permanent invite made a member, and only the bar ends a membership.
+  const open = (invite.status === "pending" || (invite.status === "accepted" && !permanent)) && !invite.admitted;
 
   return (
     <li className="rounded-2xl border-2 border-ink-line p-4">
@@ -217,19 +233,21 @@ function SentInvite({ invite, onRevoke }: { invite: Invite; onRevoke: () => void
         <p className="min-w-0 truncate text-lg font-bold text-paper-light">
           {invite.guestFirstName} {invite.guestLastName}
         </p>
-        <span className={`chip flex-none ${invite.admitted ? "text-go" : open ? "text-paper" : "text-ink-soft"}`}>
+        <span
+          className={`chip flex-none ${invite.admitted || (permanent && invite.status === "accepted") ? "text-go" : open ? "text-paper" : "text-ink-soft"}`}
+        >
           {stateLabel(t, invite)}
         </span>
       </div>
       <p className="mt-0.5 text-sm text-ink-soft">
-        {nightLine(invite, night, "short")}
+        {whenLine(i18n, invite, "short")}
         {invite.guestPersonalNumber && <span className="tabular">, {invite.guestPersonalNumber}</span>}
       </p>
 
       {open &&
         (confirming ? (
           <div className="mt-4">
-            <p className="text-paper-light">{t.invites.revokeConfirm}</p>
+            <p className="text-paper-light">{permanent ? t.invites.revokeConfirmPermanent : t.invites.revokeConfirm}</p>
             <div className="mt-3 flex gap-2">
               <button type="button" className="btn btn-stop btn-small flex-1" onClick={onRevoke}>
                 {t.invites.revoke}
@@ -260,7 +278,8 @@ function inviteUrl(code: string): string {
  * or copies it where there is no sheet.
  */
 function ShareLink({ invite, small = false }: { invite: Invite; small?: boolean }) {
-  const { t, fill, night } = useI18n();
+  const i18n = useI18n();
+  const { t, fill } = i18n;
   const [copied, setCopied] = useState(false);
 
   async function share() {
@@ -268,7 +287,11 @@ function ShareLink({ invite, small = false }: { invite: Invite; small?: boolean 
     if (navigator.share) {
       try {
         // The words travel with the link, so the guest's chat shows what it is for.
-        await navigator.share({ text: fill(t.invites.shareText, { venue: venue.name, night: nightLine(invite, night, "short") }), url });
+        const text =
+          invite.kind === "permanent"
+            ? fill(t.invites.shareTextPermanent, { venue: venue.name })
+            : fill(t.invites.shareText, { venue: venue.name, night: whenLine(i18n, invite, "short") });
+        await navigator.share({ text, url });
         return;
       } catch (error) {
         // Closed the sheet: that is an answer. Anything else, fall through to copying.
@@ -297,7 +320,8 @@ function ShareLink({ invite, small = false }: { invite: Invite; small?: boolean 
  * nothing else until the member closes it.
  */
 function CreatedSheet({ invite, onClose }: { invite: Invite; onClose: () => void }) {
-  const { t, night } = useI18n();
+  const i18n = useI18n();
+  const { t } = i18n;
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => event.key === "Escape" && onClose();
@@ -322,13 +346,13 @@ function CreatedSheet({ invite, onClose }: { invite: Invite; onClose: () => void
           <p className="display mt-3 break-words text-2xl">
             {invite.guestFirstName} {invite.guestLastName}
           </p>
-          <p className="mt-1 text-sm font-semibold text-paper-soft">{nightLine(invite, night)}</p>
+          <p className="mt-1 text-sm font-semibold text-paper-soft">{whenLine(i18n, invite)}</p>
         </div>
         {/* Phone to phone: the guest can scan this straight off the member's screen. */}
         <div className="mx-auto w-40 rounded-2xl bg-qr p-4 text-ink-deep">
           <Qr value={inviteUrl(invite.code)} label={t.common.share} className="block w-full" />
         </div>
-        <p className="text-sm text-paper-soft">{t.invites.createdBody}</p>
+        <p className="text-sm text-paper-soft">{invite.kind === "permanent" ? t.invites.createdBodyPermanent : t.invites.createdBody}</p>
         <ShareLink invite={invite} />
         <button type="button" className="btn btn-line w-full" onClick={onClose}>
           {t.common.close}
@@ -339,25 +363,44 @@ function CreatedSheet({ invite, onClose }: { invite: Invite; onClose: () => void
 }
 
 function NewInvite({ overview, onCreated }: { overview: InvitesOverview; onCreated: (invite: Invite) => void }) {
-  const { t } = useI18n();
-  // Start on the first night that can actually be invited to. With every night used up, on
-  // the first open one: the line under the row then says there is nothing left to send.
-  const firstFree = (overview.nights.find((n) => n.open && n.remaining > 0) ?? overview.nights.find((n) => n.open))?.night ?? "";
-  const [selected, setSelected] = useState(firstFree);
-  const usedUp = overview.nights.find((n) => n.night === selected)?.remaining === 0;
+  const { t, fill, night, error } = useI18n();
+  const { tonight, canInvitePermanent } = overview;
+  // Tonight, when there is a tonight to invite to. When the bar is closed, permanent — for a
+  // member who may send one; anyone else has nothing to send (below).
+  const [kind, setKind] = useState<InviteKind>(tonight.open || !canInvitePermanent ? "night" : "permanent");
+  const permanent = kind === "permanent";
   const [busy, setBusy] = useState(false);
   const [fields, setFields] = useState<Record<string, string>>({});
   const [failure, setFailure] = useState<string | null>(null);
   // The two things that may be added about a guest are folded away until they are wanted —
-  // and unfolded by themselves when the API finds a mistake in one.
+  // and unfolded by themselves when the API finds a mistake in one. A permanent invite needs
+  // the phone, so nothing is folded then.
   const [more, setMore] = useState(false);
-  const extras = more || Boolean(fields.personalNumber || fields.phone);
+  const extras = more || permanent || Boolean(fields.personalNumber || fields.phone);
   const form = useRef<HTMLFormElement>(null);
   useFirstMistake(form, fields);
 
-  if (!overview.nights.some((n) => n.open)) {
-    return <p className="rounded-2xl border-2 border-ink-line p-5 text-ink-soft">{t.invites.noNights}</p>;
+  if (!tonight.open && !canInvitePermanent) {
+    return <p className="rounded-2xl border-2 border-ink-line p-5 text-ink-soft">{error("night_closed")}</p>;
   }
+
+  // Where the calendar was: tonight's date and name, and how many guests are left — no count
+  // for an admin, who has no limit.
+  const tonightLine = !tonight.open
+    ? error("night_closed")
+    : [
+        tonight.title ? `${night(tonight.night)}, ${tonight.title}` : night(tonight.night),
+        tonight.remaining === null
+          ? null
+          : tonight.remaining === 0
+            ? t.invites.noneTonight
+            : tonight.remaining === 1
+              ? t.invites.leftTonightOne
+              : fill(t.invites.leftTonightMany, { n: tonight.remaining }),
+      ]
+        .filter(Boolean)
+        .join(". ");
+  const blocked = !permanent && (!tonight.open || tonight.remaining === 0);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -368,7 +411,7 @@ function NewInvite({ overview, onCreated }: { overview: InvitesOverview; onCreat
     setFailure(null);
     try {
       const invite = await api.post<Invite>("/invites", {
-        night: selected,
+        kind,
         firstName: sent.get("firstName"),
         lastName: sent.get("lastName"),
         personalNumber: sent.get("personalNumber"),
@@ -403,9 +446,33 @@ function NewInvite({ overview, onCreated }: { overview: InvitesOverview; onCreat
         <Field label={t.common.lastName} name="lastName" autoComplete="off" required error={fields.lastName} />
       </div>
 
+      {/* Only a member the bar has chosen has a choice to make. Everyone else invites for
+          tonight, and is told so in one line. */}
       <div>
-        <p className="label">{t.invites.night}</p>
-        <NightPicker nights={overview.nights} value={selected} onChange={setSelected} />
+        {canInvitePermanent && (
+          <>
+            <p className="label" id="invite-kind">
+              {t.invites.kindLabel}
+            </p>
+            <div role="radiogroup" aria-labelledby="invite-kind" className="grid grid-cols-2 overflow-hidden rounded-xl border-2 border-ink">
+              {(["night", "permanent"] as const).map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  role="radio"
+                  aria-checked={kind === value}
+                  onClick={() => setKind(value)}
+                  className={`min-h-12 border-ink px-2 font-bold not-first:border-l-2 ${kind === value ? "bg-ink text-paper-light" : ""}`}
+                >
+                  {value === "night" ? t.invites.kindTonight : t.invites.kindPermanent}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+        <p className={`text-sm font-semibold ${canInvitePermanent ? "mt-2" : ""} ${blocked ? "text-stamp-red" : "text-paper-soft"}`}>
+          {permanent ? t.invites.permanentHint : tonightLine}
+        </p>
       </div>
 
       {extras ? (
@@ -426,8 +493,9 @@ function NewInvite({ overview, onCreated }: { overview: InvitesOverview; onCreat
             type="tel"
             inputMode="tel"
             autoComplete="off"
-            optional
-            hint={t.invites.guestPhoneHint}
+            optional={!permanent}
+            required={permanent}
+            hint={permanent ? t.invites.permanentPhoneHint : t.invites.guestPhoneHint}
             error={fields.phone}
           />
         </div>
@@ -437,7 +505,7 @@ function NewInvite({ overview, onCreated }: { overview: InvitesOverview; onCreat
         </button>
       )}
 
-      <button type="submit" className="btn btn-ink btn-big w-full" disabled={busy || !selected || usedUp}>
+      <button type="submit" className="btn btn-ink btn-big w-full" disabled={busy || blocked}>
         {busy ? t.invites.creating : t.invites.create}
       </button>
     </form>

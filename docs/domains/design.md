@@ -56,7 +56,6 @@ Georgian has no capital letters. Do not build hierarchy on uppercase.
 | `Stamp` | `components/stamp.tsx` | A round stamp with a word across it. Inks: blue, green, red, grey, paper. |
 | `Dock` | `components/app-chrome.tsx` | The floating navigation on every signed-in screen. |
 | `Count` | `components/count.tsx` | A red mark with a white number: something is waiting for an answer. See "The dock". |
-| `NightPicker` | `components/night-picker.tsx` | One row of the nights the bar is open, to tap. A named night is a small ticket: the date is its stub, the name is beside it. See tickets.md, "Inviting a guest". |
 | `ReturnAction` | `components/return-action.tsx` | The landing page's one action, which changes for someone this phone already knows. See structure.md, "Someone who comes back". |
 | icons | `components/icons.tsx` | The app's own icons: ticket, invite, viewfinder, rubber stamp, person-in-ring. |
 | `Field`, `FormError` | `components/field.tsx` | A labelled input wired to its hint and error. A password field can be looked at before it is sent: there is no second field to catch a slip, and no "forgot password". `FieldLabel` puts "optional" at the far end of the label's line. `useFirstMistake` takes a form that came back with mistakes to the first one; `FormError` brings itself into view. |
