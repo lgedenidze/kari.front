@@ -180,7 +180,7 @@ export const en = {
     decline: "Decline",
     openTicket: "Open ticket",
     cantCome: "I can't come",
-    lockedNotMember: "Only verified members can invite guests.",
+    lockedNotMember: "Your request was not accepted, so you cannot invite guests.",
     newTitle: "Invite a guest",
     night: "Night",
     kindLabel: "For how long",

@@ -406,11 +406,12 @@ function PersonDetail({ id, onBack }: { id: string; onBack: () => void }) {
           <p className="hint">{t.roleOpens[role]}</p>
         </div>
 
-        {/* An admin always invites, with no number to set: there is nothing to switch. Bringing
-            guests is otherwise for members, so there is nothing to switch for anyone else. */}
+        {/* An admin always invites, with no number to set: there is nothing to switch. Anyone
+            else with an account invites tonight's guests until switched off here — except
+            someone the bar turned away, who has nothing to switch. */}
         {role === "admin" ? (
           <p className="px-4 py-3.5 font-semibold text-desk-soft">{t.admin.adminInvites}</p>
-        ) : user.status === "approved" && (
+        ) : (user.status === "approved" || user.status === "pending" || user.status === "guest") && (
           <div>
             <SwitchRow
               label={t.admin.invitesLabel}
@@ -448,7 +449,8 @@ function PersonDetail({ id, onBack }: { id: string; onBack: () => void }) {
                 </span>
               </div>
             )}
-            {invites && (
+            {/* Making a member is for members. */}
+            {invites && user.status === "approved" && (
               <div className="border-t-2 border-desk-line">
                 <SwitchRow
                   label={t.admin.permanentLabel}

@@ -59,10 +59,14 @@ test("a guest joins, the bar approves, the door scans and admits, and it is in t
 
   await guest.waitForURL("**/pass");
   await expect(guest.getByRole("heading", { name: "Your request is with the bar" })).toBeVisible();
-  // Not a member yet, so nobody to invite: no Invites tab to tap and be told so.
+  // Not a member yet, and already able to invite tonight's guests: the owner wanted inviting
+  // for everyone with an account, from the start. Making members is not theirs.
   const guestDock = guest.getByRole("navigation", { name: "Home" });
-  await expect(guestDock.getByRole("link", { name: "Pass" })).toBeVisible();
-  await expect(guestDock.getByRole("link", { name: "Invites" })).toHaveCount(0);
+  await guestDock.getByRole("link", { name: "Invites" }).click();
+  await expect(guest.getByRole("button", { name: "Create invite" })).toBeVisible();
+  await expect(guest.getByRole("radiogroup")).toHaveCount(0);
+  await guestDock.getByRole("link", { name: "Pass" }).click();
+  await guest.waitForURL("**/pass");
 
   // 2. The admin sees the request in the queue and approves it.
   const admin = await signIn(browser, seed.AdminPhone, seed.AdminPassword);

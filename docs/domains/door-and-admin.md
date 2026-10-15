@@ -156,7 +156,10 @@ appears at the top of the page, in the same place every time.
 - **Can invite guests** — a switch, on for every member unless it was switched off here.
   While it is on, the number of guests per night is beside it, with a minus and a plus, and
   under it a second switch, **Can invite permanent members**: off until it is switched on
-  here, for the few the bar trusts to make members. Only an approved member has these rows.
+  here, for the few the bar trusts to make members. Everyone with an account has the first
+  two rows — members, people waiting for the bar, guests who made an account — since all of
+  them invite tonight's guests until switched off. Only an approved member has the third.
+  Someone the bar turned away has none.
   An admin has none of them: one line says an admin can always invite — tonight's guests
   with no limit, and permanent members.
 - **Invited by** — under the name, for a member made by someone's permanent invite.

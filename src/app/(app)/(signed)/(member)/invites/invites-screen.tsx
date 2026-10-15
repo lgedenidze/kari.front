@@ -89,10 +89,10 @@ export function InvitesScreen({ first }: { first: InvitesOverview | null }) {
       )}
 
       {!data.canInvite ? (
-        // Inviting is a permission, and this account does not have it: not a member yet, or a
-        // member the bar switched it off for. One line. There is nothing here to work towards.
+        // Inviting is a permission, and this account does not have it: the bar switched it off
+        // for them, or turned them away. One line. There is nothing here to work towards.
         <p className="rounded-2xl border-2 border-ink-line p-5 text-ink-soft">
-          {me.status === "approved" ? error("cannot_invite") : t.invites.lockedNotMember}
+          {me.status === "rejected" ? t.invites.lockedNotMember : error("cannot_invite")}
         </p>
       ) : (
         <NewInvite

@@ -183,7 +183,7 @@ export const ka: Dict = {
     decline: "უარი",
     openTicket: "ბილეთის გახსნა",
     cantCome: "ვერ მოვალ",
-    lockedNotMember: "სტუმრების მოწვევა მხოლოდ დადასტურებულ წევრებს შეუძლიათ.",
+    lockedNotMember: "შენი მოთხოვნა არ მიიღეს, ამიტომ სტუმრებს ვერ მოიწვევ.",
     newTitle: "სტუმრის მოწვევა",
     night: "ღამე",
     kindLabel: "ვადა",
