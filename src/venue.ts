@@ -12,7 +12,8 @@ export const venue = {
   address: { ka: "თბილისი, საქართველო", en: "Tbilisi, Georgia" },
   /** Public site URL, used for canonical links, the sitemap and invite links. */
   url: process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
-  minimumAge: 18,
+  /** On the owner's word, 2026-10-15: "make age to 21". It was 18. */
+  minimumAge: 21,
   /** The agency credit. Small on purpose: the bar's name is the loud one. */
   poweredBy: { label: "wox.ge", href: "https://wox.ge" },
 } as const;

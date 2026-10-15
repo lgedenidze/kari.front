@@ -53,7 +53,7 @@ test("a guest joins, the bar approves, the door scans and admits, and it is in t
   // A name on its own is an Instagram name: no link to go and copy.
   await guest.getByLabel("Instagram or Facebook").fill(`@nino.flow.${run}`);
   await guest.getByLabel("Password", { exact: true }).fill(PASSWORD);
-  await guest.getByText("I am 18 or older.").click();
+  await guest.getByText("I am 21 or older.").click();
   await guest.getByText("I agree that the bar stores").click();
   await guest.getByRole("button", { name: "Send request" }).click();
 
