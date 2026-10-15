@@ -70,6 +70,11 @@ export function TopBar({ right }: { right?: ReactNode }) {
  * admin the back office — the same dock, on those screens too, so going from the door to the
  * office and back is a single tap from anywhere.
  *
+ * Invites is there for someone who may invite, or who has an invite waiting for them to
+ * answer. Anyone else — not a member yet, or a member the bar switched it off for — would find
+ * nothing behind it but "you can't", so they do not get the tab. It stays while its page is
+ * open, so a switch flipped in the office does not pull the tab out from under the person.
+ *
  * The place you are in is a paper ticket stub, notched like every ticket in the app, and it
  * slides to the tab you tap.
  *
@@ -81,12 +86,14 @@ export function TopBar({ right }: { right?: ReactNode }) {
  */
 export function Dock({
   role,
+  canInvite,
   invitesWaiting = 0,
   requestsWaiting = 0,
   shown,
   onTap,
 }: {
   role: UserRole;
+  canInvite: boolean;
   invitesWaiting?: number;
   requestsWaiting?: number;
   shown: string;
@@ -94,9 +101,10 @@ export function Dock({
 }) {
   const { t } = useI18n();
   const router = useRouter();
+  const invites = canInvite || invitesWaiting > 0 || shown.startsWith("/invites");
   const tabs = [
     { href: "/pass", label: t.pass.title, icon: PassIcon, badge: 0 },
-    { href: "/invites", label: t.invites.title, icon: InviteIcon, badge: invitesWaiting },
+    ...(invites ? [{ href: "/invites", label: t.invites.title, icon: InviteIcon, badge: invitesWaiting }] : []),
     ...(role !== "member" ? [{ href: "/door", label: t.door.title, icon: ScanIcon, badge: 0 }] : []),
     ...(role === "admin" ? [{ href: "/admin", label: t.admin.short, icon: OfficeIcon, badge: requestsWaiting }] : []),
     { href: "/profile", label: t.profile.title, icon: ProfileIcon, badge: 0 },

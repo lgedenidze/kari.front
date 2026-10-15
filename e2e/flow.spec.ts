@@ -59,6 +59,10 @@ test("a guest joins, the bar approves, the door scans and admits, and it is in t
 
   await guest.waitForURL("**/pass");
   await expect(guest.getByRole("heading", { name: "Your request is with the bar" })).toBeVisible();
+  // Not a member yet, so nobody to invite: no Invites tab to tap and be told so.
+  const guestDock = guest.getByRole("navigation", { name: "Home" });
+  await expect(guestDock.getByRole("link", { name: "Pass" })).toBeVisible();
+  await expect(guestDock.getByRole("link", { name: "Invites" })).toHaveCount(0);
 
   // 2. The admin sees the request in the queue and approves it.
   const admin = await signIn(browser, seed.AdminPhone, seed.AdminPassword);
@@ -617,6 +621,16 @@ test("what the bar changes about a person reaches the app they already have open
   await expect(invites).not.toBeChecked();
   await expect(person.getByText("Inviting is switched off for your account.")).toBeVisible({ timeout: 15_000 });
   await expect(person.getByRole("button", { name: "Create invite" })).toHaveCount(0);
+
+  // The tab stays while they are on it. Once they leave, it goes: behind it would be only
+  // "you can't". Switched back on, it returns to the app they have open.
+  await dock.getByRole("link", { name: "Pass" }).click();
+  await person.waitForURL("**/pass");
+  await expect(dock.getByRole("link", { name: "Invites" })).toHaveCount(0);
+  await invites.click();
+  await expect(invites).toBeChecked();
+  await lookAgain();
+  await expect(dock.getByRole("link", { name: "Invites" })).toBeVisible({ timeout: 15_000 });
 });
 
 test("a link opens in Georgian on a phone that has not chosen a language", async ({ browser }) => {

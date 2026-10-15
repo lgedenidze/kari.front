@@ -65,6 +65,7 @@ function SharedDock({ shown, at, onTap }: { shown: string; at: string; onTap: (h
   return (
     <Dock
       role={me.role}
+      canInvite={me.canInvite}
       invitesWaiting={me.pendingInvites}
       // Missing only while an older API is still answering, in the minutes of a release.
       requestsWaiting={me.pendingRequests ?? 0}

@@ -72,6 +72,11 @@ One navigation for the whole app. A member sees Pass, Invites, Profile. Staff al
 admin also gets Office. The same dock is on the door and admin screens, so every place is one
 tap from every other.
 
+Invites is only for someone who may invite (`me.canInvite`) or has an invite waiting to answer.
+Anyone else — not a member yet, or switched off by the bar — would find only "you can't" behind
+it, so the tab is not there. It stays while its page is open. The owner, 2026-10-15: "why show
+invite page then if he cant invite?"
+
 The current place is a paper ticket stub (`.tab-stub`) with the same side notches as every
 ticket. It slides to the tab that is tapped — at once, before the page has arrived. The dock is
 built once, in `(signed)/layout.tsx`, and never unmounts; that is what lets it slide. A result or a form at the door covers the dock, so
