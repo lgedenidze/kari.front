@@ -144,6 +144,8 @@ test("coming back to a tab shows what it last showed, not the state from before"
   const admin = await signedIn(browser, seed.AdminPhone, seed.AdminPassword);
   const approved = await admin.request.post(`/api/admin/users/${me.id}/review`, { data: { decision: "approve" } });
   expect(approved.ok()).toBe(true);
+  // Inviting is the admin's to hand out; this member needs the Invites tab below.
+  expect((await admin.request.patch(`/api/admin/users/${me.id}`, { data: { inviteMode: "on" } })).ok()).toBe(true);
 
   await member.goto("/pass");
   const print = member.getByRole("button", { name: "Get tonight's pass" });

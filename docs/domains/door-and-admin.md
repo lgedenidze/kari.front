@@ -153,12 +153,12 @@ appears at the top of the page, in the same place every time.
 
 - **Role** — three buttons side by side: Member, Door, Admin. The line under them names what
   that role finds in the dock, in the dock's own words.
-- **Can invite guests** — a switch, on for every member unless it was switched off here.
+- **Can invite guests** — a switch, off for everyone until it is switched on here.
   While it is on, the number of guests per night is beside it, with a minus and a plus, and
   under it a second switch, **Can invite permanent members**: off until it is switched on
   here, for the few the bar trusts to make members. Everyone with an account has the first
-  two rows — members, people waiting for the bar, guests who made an account — since all of
-  them invite tonight's guests until switched off. Only an approved member has the third.
+  row — members, people waiting for the bar, guests who made an account — since an admin may
+  let any of them invite tonight's guests. Only an approved member has the permanent switch.
   Someone the bar turned away has none.
   An admin has none of them: one line says an admin can always invite — tonight's guests
   with no limit, and permanent members.

@@ -330,7 +330,8 @@ function PersonDetail({ id, onBack }: { id: string; onBack: () => void }) {
   const busy = sending !== null;
   const role = sending?.role ?? user.role;
   const status = suspending ? "banned" : (sending?.status ?? user.status);
-  const invites = sending?.inviteMode ? sending.inviteMode === "on" : user.inviteMode !== "off";
+  // Only an admin's "on" lets someone invite: nobody has it by default ("auto").
+  const invites = sending?.inviteMode ? sending.inviteMode === "on" : user.inviteMode === "on";
   const perNight = sending?.inviteQuota ?? detail.effectiveQuota;
   const permanent = sending?.mayInvitePermanent ?? user.mayInvitePermanent;
   const notesNow = notes ?? user.staffNotes ?? "";
@@ -406,8 +407,8 @@ function PersonDetail({ id, onBack }: { id: string; onBack: () => void }) {
           <p className="hint">{t.roleOpens[role]}</p>
         </div>
 
-        {/* An admin always invites, with no number to set: there is nothing to switch. Anyone
-            else with an account invites tonight's guests until switched off here — except
+        {/* An admin always invites, with no number to set: there is nothing to switch. For
+            anyone else with an account, inviting is off until it is switched on here — except
             someone the bar turned away, who has nothing to switch. */}
         {role === "admin" ? (
           <p className="px-4 py-3.5 font-semibold text-desk-soft">{t.admin.adminInvites}</p>

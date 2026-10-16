@@ -109,9 +109,9 @@ for tonight, or — for a member the bar has chosen — permanent: the guest bec
   pass, where the ticket is — or, for a permanent invite, the member's own pass. Decline is
   asked for twice: an invite cannot be accepted again.
 - **Not allowed to invite** — one line in place of the form. Inviting tonight's guests is a
-  permission everyone with an account has until the bar switches it off for them
-  (`me.canInvite`, from the API), and every admin has always; someone the bar turned away is
-  told their request was not accepted. Without it the dock has no Invites tab at all. There is
+  permission an admin hands out person by person (`me.canInvite`, from the API); nobody has it
+  by default, and every admin has it always. Someone the bar turned away is told their request
+  was not accepted. Without it the dock has no Invites tab at all. There is
   nothing to count towards. An admin's switch reaches the open screen within seconds: the
   invites are asked for again every 8.
 

@@ -59,14 +59,11 @@ test("a guest joins, the bar approves, the door scans and admits, and it is in t
 
   await guest.waitForURL("**/pass");
   await expect(guest.getByRole("heading", { name: "Your request is with the bar" })).toBeVisible();
-  // Not a member yet, and already able to invite tonight's guests: the owner wanted inviting
-  // for everyone with an account, from the start. Making members is not theirs.
+  // Nobody invites until an admin hands it to them, so there is no Invites tab to tap and be
+  // told so.
   const guestDock = guest.getByRole("navigation", { name: "Home" });
-  await guestDock.getByRole("link", { name: "Invites" }).click();
-  await expect(guest.getByRole("button", { name: "Create invite" })).toBeVisible();
-  await expect(guest.getByRole("radiogroup")).toHaveCount(0);
-  await guestDock.getByRole("link", { name: "Pass" }).click();
-  await guest.waitForURL("**/pass");
+  await expect(guestDock.getByRole("link", { name: "Pass" })).toBeVisible();
+  await expect(guestDock.getByRole("link", { name: "Invites" })).toHaveCount(0);
 
   // 2. The admin sees the request in the queue and approves it.
   const admin = await signIn(browser, seed.AdminPhone, seed.AdminPassword);
@@ -368,6 +365,12 @@ test("a member the bar trusts makes a guest a member with a permanent invite", a
   await admin.goto("/admin#people");
   await admin.getByRole("searchbox").fill(last);
   await admin.getByRole("button", { name: new RegExp(`Nana ${last}`) }).first().click();
+  // Inviting at all is off until the admin says so; the permanent switch sits under it.
+  const guests = admin.getByRole("switch", { name: "Can invite guests" });
+  await expect(guests).not.toBeChecked();
+  await expect(admin.getByRole("switch", { name: "Can invite permanent members" })).toHaveCount(0);
+  await guests.click();
+  await expect(guests).toBeChecked();
   const permanent = admin.getByRole("switch", { name: "Can invite permanent members" });
   await expect(permanent).not.toBeChecked();
   await permanent.click();
@@ -613,28 +616,29 @@ test("what the bar changes about a person reaches the app they already have open
   await expect(dock.getByRole("link", { name: "Door" })).toHaveCount(0);
   await expect(dock.getByRole("link", { name: "Office" })).toHaveCount(0);
 
-  // Inviting is a permission, and a member has it from the day they are approved: nobody
-  // switched it on for this one, and nothing had to be earned first.
-  await dock.getByRole("link", { name: "Invites" }).click();
-  await expect(person.getByRole("button", { name: "Create invite" })).toBeVisible();
+  // Inviting is the admin's to hand out: a member has none until it is switched on, and no
+  // Invites tab to find that out on.
+  await expect(dock.getByRole("link", { name: "Invites" })).toHaveCount(0);
   const invites = admin.getByRole("switch", { name: "Can invite guests" });
-  await expect(invites).toBeChecked();
+  await expect(invites).not.toBeChecked();
 
-  // The bar takes it away from this one person, with one tap. Their invite form goes.
+  // The admin switches it on with one tap. The tab arrives in the app they have open.
+  await invites.click();
+  await expect(invites).toBeChecked();
+  await lookAgain();
+  await dock.getByRole("link", { name: "Invites" }).click({ timeout: 15_000 });
+  await expect(person.getByRole("button", { name: "Create invite" })).toBeVisible();
+
+  // And takes it away again. Their invite form goes; the tab stays while they are on it.
   await invites.click();
   await expect(invites).not.toBeChecked();
   await expect(person.getByText("Inviting is switched off for your account.")).toBeVisible({ timeout: 15_000 });
   await expect(person.getByRole("button", { name: "Create invite" })).toHaveCount(0);
 
-  // The tab stays while they are on it. Once they leave, it goes: behind it would be only
-  // "you can't". Switched back on, it returns to the app they have open.
+  // Once they leave, it goes: behind it would be only "you can't".
   await dock.getByRole("link", { name: "Pass" }).click();
   await person.waitForURL("**/pass");
   await expect(dock.getByRole("link", { name: "Invites" })).toHaveCount(0);
-  await invites.click();
-  await expect(invites).toBeChecked();
-  await lookAgain();
-  await expect(dock.getByRole("link", { name: "Invites" })).toBeVisible({ timeout: 15_000 });
 });
 
 test("a link opens in Georgian on a phone that has not chosen a language", async ({ browser }) => {

@@ -73,8 +73,8 @@ admin also gets Office. The same dock is on the door and admin screens, so every
 tap from every other.
 
 Invites is only for someone who may invite (`me.canInvite`) or has an invite waiting to answer.
-Everyone with an account may, until the bar switches them off or turns them away; for them
-there would be only "you can't" behind it, so the tab is not there. It stays while its page is open. The owner, 2026-10-15: "why show
+Only the people an admin switched on may; for anyone else there would be only "you can't"
+behind it, so the tab is not there. It stays while its page is open. The owner, 2026-10-15: "why show
 invite page then if he cant invite?"
 
 The current place is a paper ticket stub (`.tab-stub`) with the same side notches as every
