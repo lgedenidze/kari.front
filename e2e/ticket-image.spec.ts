@@ -4,7 +4,7 @@ import { expect, test, type APIResponse, type Browser, type Page } from "@playwr
 
 // The ticket as a picture: what the "Download ticket" button hands over.
 
-const seed = JSON.parse(readFileSync(join(__dirname, "../../api/src/Kari.Api/appsettings.json"), "utf8")).Kari.Seed as {
+const seed = JSON.parse(readFileSync(join(__dirname, "../../api/src/Kari.Api/appsettings.Development.json"), "utf8")).Kari.Seed as {
   AdminPhone: string;
   AdminPassword: string;
   StaffPhone: string;

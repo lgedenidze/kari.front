@@ -157,7 +157,7 @@ function ReceivedInvite({
   onDecline: () => Promise<void>;
 }) {
   const i18n = useI18n();
-  const { t, fill } = i18n;
+  const { t } = i18n;
   const permanent = invite.kind === "permanent";
   const [busy, setBusy] = useState(false);
   // Saying no cannot be taken back, and its button sits beside "accept": it is asked for twice.
@@ -173,7 +173,7 @@ function ReceivedInvite({
   return (
     <li className="paper p-5">
       <p className="text-sm font-bold text-paper-soft">{whenLine(i18n, invite)}</p>
-      <h3 className="mt-1 text-xl">{fill(permanent ? t.invites.invitedYouMember : t.invites.invitedYou, { name: invite.inviterName })}</h3>
+      <h3 className="mt-1 text-xl">{permanent ? t.invites.invitedYouMember : t.invites.invitedYou}</h3>
       <p className="mt-1 text-paper-soft">
         {invite.guestFirstName} {invite.guestLastName}
       </p>

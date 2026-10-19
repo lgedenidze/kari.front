@@ -1,7 +1,7 @@
 /**
  * The bar's identity. Its name is the app's name: KARI (კარი, "door"), on the owner's word
- * (2026-10-13). It was NISLI while the name was not known. Rename the venue here and nowhere
- * else.
+ * (2026-10-13). It was NISLI while the name was not known. Rename the venue here, and in the
+ * invite SMS the API sends (kari.back: Features/Invites/InviteSms.cs).
  */
 export const venue = {
   name: "KARI",

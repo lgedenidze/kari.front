@@ -5,7 +5,7 @@ import { expect, test, type Browser, type Page } from "@playwright/test";
 // How a screen arrives. These tests slow the server down on purpose, so that every state a
 // screen passes through on a bad connection is on screen long enough to be seen and counted.
 
-const seed = JSON.parse(readFileSync(join(__dirname, "../../api/src/Kari.Api/appsettings.json"), "utf8")).Kari.Seed as {
+const seed = JSON.parse(readFileSync(join(__dirname, "../../api/src/Kari.Api/appsettings.Development.json"), "utf8")).Kari.Seed as {
   AdminPhone: string;
   AdminPassword: string;
   StaffPhone: string;

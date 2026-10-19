@@ -87,14 +87,9 @@ export function LiveTicket({
     };
   }, [live]);
 
+  // A guest's ticket says "Guest", not whose: that stays in the bar's records (owner, 2026-10-20).
   const kindLabel =
-    ticket.kind === "guest" && ticket.inviterName
-      ? fill(t.ticket.guestOf, { name: ticket.inviterName })
-      : ticket.kind === "door"
-        ? t.ticket.doorTicket
-        : ticket.kind === "guest"
-          ? t.status.guest
-          : t.ticket.member;
+    ticket.kind === "door" ? t.ticket.doorTicket : ticket.kind === "guest" ? t.status.guest : t.ticket.member;
 
   const nightLabel = ticket.nightTitle ? `${ticket.nightTitle}, ${night(ticket.night)}` : night(ticket.night);
   const admitted = ticket.admittedAt !== null;

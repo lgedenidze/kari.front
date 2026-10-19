@@ -79,7 +79,7 @@ describe("a ticket in Wallet", () => {
 
   it("names the member who invited a guest, in the guest's language", () => {
     const guest: Ticket = { ...ticket, kind: "guest", inviterName: "Keti Dolidze" };
-    expect(ticketKind(guest, "en")).toBe("Guest of Keti Dolidze");
+    expect(ticketKind(guest, "en")).toBe("Guest");
     expect(front(walletTicket({ ticket: guest, live, lang: "en" })).headerFields[0]).toMatchObject({ label: "Date", value: "Tue, 13 Oct" });
   });
 });

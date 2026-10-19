@@ -44,7 +44,7 @@ const INK_SOFT = "rgb(169, 182, 230)";
 /** The line over the name: what kind of ticket this is. Shared with the band picture. */
 export function ticketKind(ticket: Ticket, lang: Lang): string {
   const t = getDict(lang);
-  if (ticket.kind === "guest" && ticket.inviterName) return fill(t.ticket.guestOf, { name: ticket.inviterName });
+  // Not whose guest: who invited them stays in the bar's records, not on the ticket (owner, 2026-10-20).
   if (ticket.kind === "door") return t.ticket.doorTicket;
   return ticket.kind === "guest" ? t.status.guest : t.ticket.member;
 }

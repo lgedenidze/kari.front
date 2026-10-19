@@ -6,7 +6,7 @@ it from a back office. Georgian and English.
 
 Next.js 16 · TypeScript · Tailwind v4. The API lives in `kari.back`.
 
-Live: https://kari-kappa.vercel.app
+Live: https://kari.wox.ge
 
 ## Run
 

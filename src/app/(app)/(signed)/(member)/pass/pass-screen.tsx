@@ -194,7 +194,7 @@ export function PassScreen({
                   {pass.nightTitle && `, ${pass.nightTitle}`}
                 </p>
                 <p className="text-sm text-ink-soft">
-                  {pass.inviterName ? fill(t.ticket.guestOf, { name: pass.inviterName }) : t.ticket.member}
+                  {pass.kind === "guest" ? t.status.guest : t.ticket.member}
                 </p>
               </li>
             ))}

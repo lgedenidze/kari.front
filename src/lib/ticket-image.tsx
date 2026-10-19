@@ -1,7 +1,7 @@
 import "server-only";
 import { ImageResponse } from "next/og";
 import QRCode from "qrcode";
-import { fill, formatNight, getDict } from "@/i18n";
+import { formatNight, getDict } from "@/i18n";
 import { venue, type Lang } from "@/venue";
 import { ticketFonts } from "./ticket-fonts";
 import type { Ticket } from "./types";
@@ -56,14 +56,9 @@ export function ticketImage({ ticket, link, lang }: { ticket: Ticket; link: stri
   const t = getDict(lang);
   const qr = qrPath(link);
   const night = ticket.nightTitle ? `${ticket.nightTitle}, ${formatNight(ticket.night, lang)}` : formatNight(ticket.night, lang, "long");
+  // A guest's ticket says "Guest", not whose: that stays in the bar's records (owner, 2026-10-20).
   const kind =
-    ticket.kind === "guest" && ticket.inviterName
-      ? fill(t.ticket.guestOf, { name: ticket.inviterName })
-      : ticket.kind === "door"
-        ? t.ticket.doorTicket
-        : ticket.kind === "guest"
-          ? t.status.guest
-          : t.ticket.member;
+    ticket.kind === "door" ? t.ticket.doorTicket : ticket.kind === "guest" ? t.status.guest : t.ticket.member;
   const size = nameSize(ticket);
 
   return new ImageResponse(

@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { expect, test, type Browser, type BrowserContext, type Page } from "@playwright/test";
 
 // The seeded staff and admin logins, read from the API's committed settings.
-const seed = JSON.parse(readFileSync(join(__dirname, "../../api/src/Kari.Api/appsettings.json"), "utf8")).Kari.Seed as {
+const seed = JSON.parse(readFileSync(join(__dirname, "../../api/src/Kari.Api/appsettings.Development.json"), "utf8")).Kari.Seed as {
   AdminPhone: string;
   AdminPassword: string;
   StaffPhone: string;
@@ -171,7 +171,7 @@ test("a member invites a named guest, who gets a ticket with no account", async 
   // The guest opens the link in a browser that has never signed in.
   const guest = await (await english(browser)).newPage();
   await guest.goto(new URL(link!).pathname);
-  await expect(guest.getByRole("heading", { name: `Keti ${last} invited you` })).toBeVisible();
+  await expect(guest.getByRole("heading", { name: "You're invited" })).toBeVisible();
   await expect(guest.locator(".ticket")).toContainText(`Guest${run}`);
   // The link can be forwarded, so it never shows the whole personal number.
   await expect(guest.locator(".ticket")).toContainText("••••••••345");
@@ -393,7 +393,7 @@ test("a member the bar trusts makes a guest a member with a permanent invite", a
   // The guest opens it with no account and signs up right there, in the invite's name.
   const guest = await (await english(browser)).newPage();
   await guest.goto(new URL(link!).pathname);
-  await expect(guest.getByRole("heading", { name: `Nana ${last} invites you to be a member` })).toBeVisible();
+  await expect(guest.getByRole("heading", { name: "You're invited to be a member" })).toBeVisible();
   const signUp = guest.locator("form[aria-labelledby='join-from-invite']");
   await signUp.getByLabel("Password", { exact: true }).fill(PASSWORD);
   for (const box of await signUp.getByRole("checkbox").all()) await box.check();

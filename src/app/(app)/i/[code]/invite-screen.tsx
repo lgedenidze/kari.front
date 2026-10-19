@@ -110,18 +110,18 @@ export function InviteScreen({
     );
   }
 
-  // Pending: the invite already is the ticket it will become — the guest's name, the night,
-  // who vouches for them — with one thing missing: the code, and the button that prints it.
+  // Pending: the invite already is the ticket it will become — the guest's name, the night —
+  // with one thing missing: the code, and the button that prints it.
   // The same shape as a member's pass before it is claimed, so the two are learnt once.
   return (
     <div className="flex w-full flex-col items-center gap-5">
-      <h1 className="self-start text-4xl text-paper">{fill(t.inviteLink.title, { inviter: invite.inviterName })}</h1>
+      <h1 className="self-start text-4xl text-paper">{t.inviteLink.title}</h1>
 
       <TicketCard
         nightLabel={nightLabel}
         firstName={invite.guestFirstName}
         lastName={invite.guestLastName}
-        kindLabel={fill(t.ticket.guestOf, { name: invite.inviterName })}
+        kindLabel={t.status.guest}
         caption={
           <>
             {/* When to come: the guest has no other screen that says it. */}
@@ -260,7 +260,7 @@ function MembershipInvite({
 
   return (
     <div className="flex w-full flex-col items-center gap-5">
-      <h1 className="self-start text-4xl text-paper">{fill(t.inviteLink.memberTitle, { inviter: invite.inviterName })}</h1>
+      <h1 className="self-start text-4xl text-paper">{t.inviteLink.memberTitle}</h1>
 
       {/* The card it will become: the name, and for every night. */}
       <TicketCard

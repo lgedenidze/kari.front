@@ -13,7 +13,7 @@ import { fileURLToPath } from "node:url";
 import { chromium } from "@playwright/test";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const seed = JSON.parse(readFileSync(join(here, "../../api/src/Kari.Api/appsettings.json"), "utf8")).Kari.Seed;
+const seed = JSON.parse(readFileSync(join(here, "../../api/src/Kari.Api/appsettings.Development.json"), "utf8")).Kari.Seed;
 const base = process.env.BASE_URL ?? "http://localhost:3000";
 const slowMs = Number(process.env.SLOW_MS ?? 0);
 

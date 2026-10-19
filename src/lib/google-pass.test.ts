@@ -90,9 +90,9 @@ describe("a ticket in Google Wallet", () => {
     ]);
   });
 
-  it("names the guest and the member who invited them", () => {
+  it("names the guest, and not the member who invited them", () => {
     expect(words(pass.header)).toBe("გიგი ბაბილაშვილი");
-    expect(words(pass.subheader)).toBe("მომწვევი: Keti Dolidze");
+    expect(words(pass.subheader)).toBe("სტუმარი");
   });
 
   it("carries the short code and nothing that admits by itself", () => {

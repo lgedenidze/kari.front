@@ -33,7 +33,7 @@ server that was killed, not stopped, leaves it so. The browser console repeats
 
 ```
 src/
-  venue.ts               the bar's name and details — rename the venue here, nowhere else
+  venue.ts               the bar's name and details — rename the venue here (and in the API's invite SMS)
   app/
     (ka)/                Georgian public pages: /, /privacy        — static
     (en)/en/             English public pages:  /en, /en/privacy   — static
@@ -138,7 +138,7 @@ stub of every pass, and under the sign-in forms. Keep it small; the bar's name i
 | Variable | What |
 |---|---|
 | `API_URL` | Where the .NET API is. Server-side only. Read at request time. |
-| `NEXT_PUBLIC_SITE_URL` | This site's public address, for canonical links and the sitemap. On Vercel it falls back to the project's production URL. |
+| `NEXT_PUBLIC_SITE_URL` | This site's public address, for canonical links and the sitemap. On Vercel it falls back to the project's production URL. If the address changes, change the API's `Kari:SiteUrl` too: the invite SMS links there. |
 | `GOOGLE_WALLET_KEY`, `GOOGLE_WALLET_ISSUER_ID` | The key file of the Google service account the bar's Google Wallet issuer account has let in (JSON, base64), and that issuer's number, for "Add to Google Wallet". **Secrets — never committed.** Without them the feature is simply absent. `scripts/google-wallet.sh` checks and installs them. |
 | `APPLE_PASS_P12`, `APPLE_PASS_P12_PASSWORD` | The bar's Pass Type ID certificate from Apple (a .p12, base64) and its password, for "Add to Apple Wallet". **Secrets — never committed.** Without them the feature is simply absent. `scripts/wallet-certificate.sh` installs them. |
 
@@ -146,4 +146,4 @@ stub of every pass, and under the sign-in forms. Keep it small; the bar's name i
 
 Vercel project `kari` (team `lgedenidzes-projects`), linked from this folder. `API_URL` is set
 in the project's production environment. `vercel --prod` deploys. Live at
-https://kari-kappa.vercel.app.
+https://kari.wox.ge (also https://kari-kappa.vercel.app).
